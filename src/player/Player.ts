@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Controls } from "./Controls";
-import { World, BlockType } from "../world/World";
+import { World } from "../world/World";
 
 const SPEED = 5.0;
 const GRAVITY = -20.0;

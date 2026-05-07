@@ -1,8 +1,8 @@
 import * as THREE from "three";
-import { World, BlockType } from "./world/World";
+import { World } from "./world/World";
 import { Controls } from "./player/Controls";
 import { Player } from "./player/Player";
-import { BLOCK_TYPES, DEFAULT_BLOCK } from "./Block";
+import { BLOCK_TYPES, DEFAULT_BLOCK, BlockType } from "./Block";
 
 // Scene setup
 const scene = new THREE.Scene();
@@ -136,12 +136,7 @@ renderer.domElement.addEventListener("mouseup", () => {
 
 // Raycast helper
 function raycastBlock(): { position: THREE.Vector3; normal: THREE.Vector3 } | null {
-  rayDirection.set(0, 0, -1).unproject(camera).sub(camera.position).normalize();
-  raycaster.set(camera.position, rayDirection);
-  raycaster.far = 6;
-
-  // We need to check intersection with world blocks
-  // For simplicity, use a step-based approach
+  camera.getWorldDirection(rayDirection);
   const origin = player.getEyePosition();
   const step = 0.1;
   const maxSteps = 60;
@@ -174,7 +169,6 @@ function raycastBlock(): { position: THREE.Vector3; normal: THREE.Vector3 } | nu
 }
 
 // Game loop
-let lastTime = performance.now();
 const clock = new THREE.Clock();
 
 function animate(): void {
