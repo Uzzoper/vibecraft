@@ -119,21 +119,6 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-// Block interaction
-let mouseDown = false;
-let mouseButton: number | null = null;
-
-renderer.domElement.addEventListener("mousedown", (event) => {
-  if (document.pointerLockElement !== renderer.domElement) return;
-  mouseDown = true;
-  mouseButton = event.button;
-});
-
-renderer.domElement.addEventListener("mouseup", () => {
-  mouseDown = false;
-  mouseButton = null;
-});
-
 // Raycast helper
 function raycastBlock(): { position: THREE.Vector3; normal: THREE.Vector3 } | null {
   camera.getWorldDirection(rayDirection);
@@ -153,11 +138,29 @@ function raycastBlock(): { position: THREE.Vector3; normal: THREE.Vector3 } | nu
       const py = origin.y + rayDirection.y * step * i;
       const pz = origin.z + rayDirection.z * step * i;
 
-      const normal = new THREE.Vector3(
-        Math.round(px - x - 0.5),
-        Math.round(py - y - 0.5),
-        Math.round(pz - z - 0.5)
+      // Determine which face was hit by finding closest boundary
+      const fracX = px - x;
+      const fracY = py - y;
+      const fracZ = pz - z;
+
+      const distLeft = fracX;         // distance to face at x
+      const distRight = 1 - fracX;   // distance to face at x+1
+      const distBottom = fracY;       // distance to face at y
+      const distTop = 1 - fracY;     // distance to face at y+1
+      const distFront = fracZ;        // distance to face at z
+      const distBack = 1 - fracZ;    // distance to face at z+1
+
+      const minDist = Math.min(
+        distLeft, distRight, distBottom, distTop, distFront, distBack
       );
+
+      const normal = new THREE.Vector3(0, 0, 0);
+      if (minDist === distLeft)   normal.set(-1, 0, 0);
+      else if (minDist === distRight) normal.set(1, 0, 0);
+      else if (minDist === distBottom) normal.set(0, -1, 0);
+      else if (minDist === distTop)    normal.set(0, 1, 0);
+      else if (minDist === distFront)  normal.set(0, 0, -1);
+      else if (minDist === distBack)   normal.set(0, 0, 1);
 
       return {
         position: new THREE.Vector3(x, y, z),
@@ -167,6 +170,40 @@ function raycastBlock(): { position: THREE.Vector3; normal: THREE.Vector3 } | nu
   }
   return null;
 }
+
+// Block interaction - process directly on mousedown
+renderer.domElement.addEventListener("mousedown", (event) => {
+  if (document.pointerLockElement !== renderer.domElement) return;
+  event.preventDefault();
+
+  console.log("Mouse down, button:", event.button);
+
+  const hit = raycastBlock();
+  if (!hit) {
+    console.log("No block hit");
+    return;
+  }
+
+  console.log("Hit block at:", hit.position, "normal:", hit.normal);
+
+  if (event.button === 0) {
+    // Left click: remove block
+    console.log("Removing block at", hit.position);
+    world.setBlock(hit.position.x, hit.position.y, hit.position.z, 0 as BlockType);
+  } else if (event.button === 2) {
+    // Right click: place block
+    const placePos = hit.position.clone().add(hit.normal);
+    console.log("Attempting to place block at", placePos, "type:", selectedBlock);
+    const blockAtPlace = world.getBlock(placePos.x, placePos.y, placePos.z);
+    console.log("Block at place pos:", blockAtPlace);
+    if (blockAtPlace === undefined || blockAtPlace === 0) {
+      world.setBlock(placePos.x, placePos.y, placePos.z, selectedBlock);
+      console.log("Block placed!");
+    } else {
+      console.log("Cannot place, position occupied");
+    }
+  }
+});
 
 // Game loop
 const clock = new THREE.Clock();
@@ -182,27 +219,6 @@ function animate(): void {
 
     // Update world (load chunks around player)
     world.update(player.position.x, player.position.z);
-
-    // Block interaction
-    if (mouseDown && mouseButton !== null) {
-      const hit = raycastBlock();
-      if (hit) {
-        if (mouseButton === 0) {
-          // Left click: remove block
-          world.setBlock(hit.position.x, hit.position.y, hit.position.z, 0 as BlockType);
-        } else if (mouseButton === 2) {
-          // Right click: place block
-          const placePos = hit.position.clone().add(hit.normal);
-          const blockAtPlace = world.getBlock(placePos.x, placePos.y, placePos.z);
-          if (blockAtPlace === undefined || blockAtPlace === 0) {
-            world.setBlock(placePos.x, placePos.y, placePos.z, selectedBlock);
-          }
-        }
-      }
-      // Reset to prevent rapid firing
-      mouseDown = false;
-      mouseButton = null;
-    }
   }
 
   renderer.render(scene, camera);

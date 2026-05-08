@@ -66,7 +66,7 @@ export class World {
     const cx = Math.floor(worldX / CHUNK_SIZE);
     const cz = Math.floor(worldZ / CHUNK_SIZE);
     const chunk = this.chunks.get(this.chunkKey(cx, cz));
-    if (!chunk) return BlockType.Grass; // or air
+    if (!chunk) return BlockType.Air;
 
     const lx = ((worldX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
     const ly = worldY;
