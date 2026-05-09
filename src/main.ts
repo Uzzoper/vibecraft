@@ -176,31 +176,18 @@ renderer.domElement.addEventListener("mousedown", (event) => {
   if (document.pointerLockElement !== renderer.domElement) return;
   event.preventDefault();
 
-  console.log("Mouse down, button:", event.button);
-
   const hit = raycastBlock();
-  if (!hit) {
-    console.log("No block hit");
-    return;
-  }
-
-  console.log("Hit block at:", hit.position, "normal:", hit.normal);
+  if (!hit) return;
 
   if (event.button === 0) {
     // Left click: remove block
-    console.log("Removing block at", hit.position);
     world.setBlock(hit.position.x, hit.position.y, hit.position.z, 0 as BlockType);
   } else if (event.button === 2) {
     // Right click: place block
     const placePos = hit.position.clone().add(hit.normal);
-    console.log("Attempting to place block at", placePos, "type:", selectedBlock);
     const blockAtPlace = world.getBlock(placePos.x, placePos.y, placePos.z);
-    console.log("Block at place pos:", blockAtPlace);
     if (blockAtPlace === undefined || blockAtPlace === 0) {
       world.setBlock(placePos.x, placePos.y, placePos.z, selectedBlock);
-      console.log("Block placed!");
-    } else {
-      console.log("Cannot place, position occupied");
     }
   }
 });

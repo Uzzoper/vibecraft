@@ -3,8 +3,8 @@ import { Controls } from "./Controls";
 import { World } from "../world/World";
 
 const SPEED = 5.0;
-const GRAVITY = -20.0;
-const JUMP_FORCE = 8.0;
+const GRAVITY = -10.0;
+const JUMP_FORCE = 1.2;
 const PLAYER_HEIGHT = 2.0;
 const PLAYER_WIDTH = 0.6;
 
@@ -26,17 +26,6 @@ export class Player {
   }
 
   update(deltaTime: number): void {
-    // Apply gravity
-    if (!this.onGround) {
-      this.velocity.y += GRAVITY * deltaTime;
-    }
-
-    // Jump
-    if (this.controls.moveUp && this.onGround) {
-      this.velocity.y = JUMP_FORCE;
-      this.onGround = false;
-    }
-
     // Horizontal movement
     const forward = new THREE.Vector3();
     this.camera.getWorldDirection(forward);
@@ -54,45 +43,78 @@ export class Player {
 
     if (moveDir.length() > 0) {
       moveDir.normalize().multiplyScalar(SPEED * deltaTime);
-      this.tryMove(moveDir.x, moveDir.z);
+      this.tryMoveHorizontal(moveDir.x, moveDir.z);
     }
 
-    // Vertical movement (gravity)
+    // Physics — apply gravity first
+    this.velocity.y += GRAVITY * deltaTime;
     this.velocity.y = Math.max(this.velocity.y, -50); // terminal velocity
-    this.tryMoveY(this.velocity.y * deltaTime);
 
-    // Update camera position
+    // Move vertically (handles landing and sets onGround)
+    this.tryMoveVertical();
+
+    // After vertical movement, detect walking off edges
+    if (!this.checkGroundBelow() && this.onGround) {
+      this.onGround = false;
+    }
+
+    // Jump (only if on ground)
+    if (this.controls.moveUp && this.onGround) {
+      this.velocity.y = JUMP_FORCE;
+      this.onGround = false;
+    }
+
     this.updateCamera();
   }
 
-  private tryMove(dx: number, dz: number): void {
+  private checkGroundBelow(): boolean {
+    // Check if there is a solid block directly below the player's feet
+    // Check several points under the player's bounding box
+    for (let dx = -PLAYER_WIDTH / 2; dx <= PLAYER_WIDTH / 2; dx += 0.5) {
+      for (let dz = -PLAYER_WIDTH / 2; dz <= PLAYER_WIDTH / 2; dz += 0.5) {
+        const bx = Math.floor(this.position.x + dx);
+        const by = Math.floor(this.position.y) - 1;
+        const bz = Math.floor(this.position.z + dz);
+
+        if (this.isSolidBlock(bx, by, bz)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private tryMoveHorizontal(dx: number, dz: number): void {
     const newX = this.position.x + dx;
     const newZ = this.position.z + dz;
 
-    // Check collision at new position
-    if (!this.checkCollision(newX, this.position.y, this.position.z)) {
+    // Check for horizontal collision at current Y
+    if (!this.checkCollisionAt(newX, this.position.y, this.position.z)) {
       this.position.x = newX;
     }
-    if (!this.checkCollision(this.position.x, this.position.y, newZ)) {
+    if (!this.checkCollisionAt(this.position.x, this.position.y, newZ)) {
       this.position.z = newZ;
     }
   }
 
-  private tryMoveY(dy: number): void {
+  private tryMoveVertical(): void {
+    const dy = this.velocity.y;
     const newY = this.position.y + dy;
+
     if (dy < 0) {
-      // Moving down - check ground
-      if (!this.checkCollision(this.position.x, newY, this.position.z)) {
+      // Falling down — check if we hit something below
+      if (!this.checkCollisionAt(this.position.x, newY, this.position.z)) {
         this.position.y = newY;
         this.onGround = false;
       } else {
-        this.position.y = Math.ceil(this.position.y);
+        // Land on top of a block: snap to the block surface
+        this.position.y = Math.floor(this.position.y);
         this.velocity.y = 0;
         this.onGround = true;
       }
-    } else {
-      // Moving up
-      if (!this.checkCollision(this.position.x, newY + PLAYER_HEIGHT, this.position.z)) {
+    } else if (dy > 0) {
+      // Moving up — check if we hit a block above
+      if (!this.checkCollisionAt(this.position.x, newY + PLAYER_HEIGHT, this.position.z)) {
         this.position.y = newY;
       } else {
         this.velocity.y = 0;
@@ -100,18 +122,17 @@ export class Player {
     }
   }
 
-  private checkCollision(x: number, y: number, z: number): boolean {
-    // Check if any of the blocks around the player's feet and head are solid
-    for (let dy = 0; dy <= PLAYER_HEIGHT; dy += 1) {
+  private checkCollisionAt(x: number, y: number, z: number): boolean {
+    // Sample several points within the player's bounding box
+    for (let dy = 0; dy <= PLAYER_HEIGHT; dy += 0.5) {
       for (let dx = -PLAYER_WIDTH / 2; dx <= PLAYER_WIDTH / 2; dx += 0.5) {
         for (let dz = -PLAYER_WIDTH / 2; dz <= PLAYER_WIDTH / 2; dz += 0.5) {
-          const block = this.world.getBlock(
-            Math.floor(x + dx),
-            Math.floor(y + dy),
-            Math.floor(z + dz)
-          );
-          if (block !== undefined && block > 0) {
-            return true; // collision
+          const bx = Math.floor(x + dx);
+          const by = Math.floor(y + dy);
+          const bz = Math.floor(z + dz);
+
+          if (this.isSolidBlock(bx, by, bz)) {
+            return true;
           }
         }
       }
@@ -119,10 +140,15 @@ export class Player {
     return false;
   }
 
+  private isSolidBlock(bx: number, by: number, bz: number): boolean {
+    const block = this.world.getBlock(bx, by, bz);
+    return block !== undefined && block > 0;
+  }
+
   private updateCamera(): void {
     this.camera.position.set(
       this.position.x,
-      this.position.y + PLAYER_HEIGHT - 0.5, // camera at head level
+      this.position.y + PLAYER_HEIGHT,
       this.position.z
     );
   }
