@@ -37,7 +37,7 @@ export class Chunk {
 
   buildMesh(materials: Map<number, THREE.Material>): THREE.Group {
     if (this.mesh) {
-      this.mesh.traverse((child) => {
+      this.mesh.traverse(child => {
         if (child instanceof THREE.Mesh) {
           child.geometry.dispose();
         }

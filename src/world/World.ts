@@ -127,7 +127,11 @@ export class World {
     }
   }
 
-  raycast(origin: THREE.Vector3, direction: THREE.Vector3, maxDistance: number = 6): {
+  raycast(
+    origin: THREE.Vector3,
+    direction: THREE.Vector3,
+    maxDistance: number = 6,
+  ): {
     position: THREE.Vector3;
     normal: THREE.Vector3;
     blockType: BlockType;

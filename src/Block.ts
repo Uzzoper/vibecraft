@@ -41,5 +41,7 @@ export const BLOCKS: Partial<Record<BlockType, BlockDefinition>> = {
   },
 };
 
-export const BLOCK_TYPES = Object.values(BLOCKS).filter((def): def is BlockDefinition => def !== undefined);
+export const BLOCK_TYPES = Object.values(BLOCKS).filter(
+  (def): def is BlockDefinition => def !== undefined,
+);
 export const DEFAULT_BLOCK = BlockType.Grass;

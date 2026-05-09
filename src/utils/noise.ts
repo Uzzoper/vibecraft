@@ -56,7 +56,7 @@ export function octaveNoise2D(
   x: number,
   y: number,
   octaves: number,
-  persistence: number = 0.5
+  persistence: number = 0.5,
 ): number {
   let total = 0;
   let frequency = 1;

@@ -36,23 +36,47 @@ export class Controls {
 
   private onKeyDown(event: KeyboardEvent): void {
     switch (event.code) {
-      case "KeyW": this.moveForward = true; break;
-      case "KeyS": this.moveBackward = true; break;
-      case "KeyA": this.moveLeft = true; break;
-      case "KeyD": this.moveRight = true; break;
-      case "Space": this.moveUp = true; break;
-      case "ShiftLeft": this.moveDown = true; break;
+      case "KeyW":
+        this.moveForward = true;
+        break;
+      case "KeyS":
+        this.moveBackward = true;
+        break;
+      case "KeyA":
+        this.moveLeft = true;
+        break;
+      case "KeyD":
+        this.moveRight = true;
+        break;
+      case "Space":
+        this.moveUp = true;
+        break;
+      case "ShiftLeft":
+        this.moveDown = true;
+        break;
     }
   }
 
   private onKeyUp(event: KeyboardEvent): void {
     switch (event.code) {
-      case "KeyW": this.moveForward = false; break;
-      case "KeyS": this.moveBackward = false; break;
-      case "KeyA": this.moveLeft = false; break;
-      case "KeyD": this.moveRight = false; break;
-      case "Space": this.moveUp = false; break;
-      case "ShiftLeft": this.moveDown = false; break;
+      case "KeyW":
+        this.moveForward = false;
+        break;
+      case "KeyS":
+        this.moveBackward = false;
+        break;
+      case "KeyA":
+        this.moveLeft = false;
+        break;
+      case "KeyD":
+        this.moveRight = false;
+        break;
+      case "Space":
+        this.moveUp = false;
+        break;
+      case "ShiftLeft":
+        this.moveDown = false;
+        break;
     }
   }
 

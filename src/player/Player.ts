@@ -146,18 +146,14 @@ export class Player {
   }
 
   private updateCamera(): void {
-    this.camera.position.set(
-      this.position.x,
-      this.position.y + PLAYER_HEIGHT,
-      this.position.z
-    );
+    this.camera.position.set(this.position.x, this.position.y + PLAYER_HEIGHT, this.position.z);
   }
 
   getEyePosition(): THREE.Vector3 {
     return new THREE.Vector3(
       this.position.x,
       this.position.y + PLAYER_HEIGHT - 0.2,
-      this.position.z
+      this.position.z,
     );
   }
 }

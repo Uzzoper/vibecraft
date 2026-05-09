@@ -22,7 +22,9 @@ export function createBlockMaterial(def: BlockDefinition): THREE.Material {
 
 export function createAllMaterials(): Map<number, THREE.Material> {
   const materials = new Map<number, THREE.Material>();
-  for (const def of Object.values(BLOCKS).filter((def): def is BlockDefinition => def !== undefined)) {
+  for (const def of Object.values(BLOCKS).filter(
+    (def): def is BlockDefinition => def !== undefined,
+  )) {
     materials.set(def.id, createBlockMaterial(def));
   }
   return materials;

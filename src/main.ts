@@ -10,12 +10,7 @@ scene.background = new THREE.Color(0x87ceeb); // sky blue
 scene.fog = new THREE.Fog(0x87ceeb, 20, 80);
 
 // Camera
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  100
-);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -88,19 +83,25 @@ function updateBlockUI(): void {
 
 function getBlockColor(blockType: BlockType): string {
   switch (blockType) {
-    case BlockType.Grass: return "#4c9900";
-    case BlockType.Dirt: return "#79553a";
-    case BlockType.Stone: return "#808080";
-    case BlockType.Wood: return "#996633";
-    case BlockType.Leaves: return "#006600";
-    default: return "#000000";
+    case BlockType.Grass:
+      return "#4c9900";
+    case BlockType.Dirt:
+      return "#79553a";
+    case BlockType.Stone:
+      return "#808080";
+    case BlockType.Wood:
+      return "#996633";
+    case BlockType.Leaves:
+      return "#006600";
+    default:
+      return "#000000";
   }
 }
 
 updateBlockUI();
 
 // Mouse wheel for block selection
-renderer.domElement.addEventListener("wheel", (event) => {
+renderer.domElement.addEventListener("wheel", event => {
   event.preventDefault();
   if (event.deltaY > 0) {
     selectedBlockIndex = (selectedBlockIndex + 1) % blockTypes.length;
@@ -111,7 +112,7 @@ renderer.domElement.addEventListener("wheel", (event) => {
 });
 
 // Number keys for block selection
-document.addEventListener("keydown", (event) => {
+document.addEventListener("keydown", event => {
   const num = parseInt(event.key);
   if (num >= 1 && num <= blockTypes.length) {
     selectedBlockIndex = num - 1;
@@ -143,24 +144,22 @@ function raycastBlock(): { position: THREE.Vector3; normal: THREE.Vector3 } | nu
       const fracY = py - y;
       const fracZ = pz - z;
 
-      const distLeft = fracX;         // distance to face at x
-      const distRight = 1 - fracX;   // distance to face at x+1
-      const distBottom = fracY;       // distance to face at y
-      const distTop = 1 - fracY;     // distance to face at y+1
-      const distFront = fracZ;        // distance to face at z
-      const distBack = 1 - fracZ;    // distance to face at z+1
+      const distLeft = fracX; // distance to face at x
+      const distRight = 1 - fracX; // distance to face at x+1
+      const distBottom = fracY; // distance to face at y
+      const distTop = 1 - fracY; // distance to face at y+1
+      const distFront = fracZ; // distance to face at z
+      const distBack = 1 - fracZ; // distance to face at z+1
 
-      const minDist = Math.min(
-        distLeft, distRight, distBottom, distTop, distFront, distBack
-      );
+      const minDist = Math.min(distLeft, distRight, distBottom, distTop, distFront, distBack);
 
       const normal = new THREE.Vector3(0, 0, 0);
-      if (minDist === distLeft)   normal.set(-1, 0, 0);
+      if (minDist === distLeft) normal.set(-1, 0, 0);
       else if (minDist === distRight) normal.set(1, 0, 0);
       else if (minDist === distBottom) normal.set(0, -1, 0);
-      else if (minDist === distTop)    normal.set(0, 1, 0);
-      else if (minDist === distFront)  normal.set(0, 0, -1);
-      else if (minDist === distBack)   normal.set(0, 0, 1);
+      else if (minDist === distTop) normal.set(0, 1, 0);
+      else if (minDist === distFront) normal.set(0, 0, -1);
+      else if (minDist === distBack) normal.set(0, 0, 1);
 
       return {
         position: new THREE.Vector3(x, y, z),
@@ -172,7 +171,7 @@ function raycastBlock(): { position: THREE.Vector3; normal: THREE.Vector3 } | nu
 }
 
 // Block interaction - process directly on mousedown
-renderer.domElement.addEventListener("mousedown", (event) => {
+renderer.domElement.addEventListener("mousedown", event => {
   if (document.pointerLockElement !== renderer.domElement) return;
   event.preventDefault();
 
@@ -219,7 +218,7 @@ window.addEventListener("resize", () => {
 });
 
 // Prevent context menu on right click
-renderer.domElement.addEventListener("contextmenu", (e) => e.preventDefault());
+renderer.domElement.addEventListener("contextmenu", e => e.preventDefault());
 
 // Start game loop
 animate();
@@ -235,7 +234,8 @@ instructions.style.fontSize = "24px";
 instructions.style.textAlign = "center";
 instructions.style.zIndex = "2000";
 instructions.style.pointerEvents = "none";
-instructions.innerHTML = "Click to play<br>WASD: Move<br>Space: Jump<br>Left Click: Remove Block<br>Right Click: Place Block<br>Scroll/1-5: Select Block";
+instructions.innerHTML =
+  "Click to play<br>WASD: Move<br>Space: Jump<br>Left Click: Remove Block<br>Right Click: Place Block<br>Scroll/1-5: Select Block";
 document.body.appendChild(instructions);
 
 // Remove instructions when pointer is locked
