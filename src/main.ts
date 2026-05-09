@@ -40,7 +40,7 @@ const controls = new Controls(camera, renderer.domElement);
 const player = new Player(camera, controls, world);
 
 // Block selection
-let selectedBlock: BlockType = DEFAULT_BLOCK;
+let selectedBlockIndex = 0; // index into blockTypes array
 const blockTypes = BLOCK_TYPES;
 
 // Raycaster for block interaction
@@ -79,9 +79,9 @@ function updateBlockUI(): void {
     const div = document.createElement("div");
     div.style.width = "40px";
     div.style.height = "40px";
-    div.style.border = index === selectedBlock ? "3px solid white" : "2px solid gray";
+    div.style.border = index === selectedBlockIndex ? "3px solid white" : "2px solid gray";
     div.style.backgroundColor = getBlockColor(block.id);
-    div.style.opacity = index === selectedBlock ? "1" : "0.6";
+    div.style.opacity = index === selectedBlockIndex ? "1" : "0.6";
     blockUI.appendChild(div);
   });
 }
@@ -103,9 +103,9 @@ updateBlockUI();
 renderer.domElement.addEventListener("wheel", (event) => {
   event.preventDefault();
   if (event.deltaY > 0) {
-    selectedBlock = ((selectedBlock + 1) % blockTypes.length) as BlockType;
+    selectedBlockIndex = (selectedBlockIndex + 1) % blockTypes.length;
   } else {
-    selectedBlock = ((selectedBlock - 1 + blockTypes.length) % blockTypes.length) as BlockType;
+    selectedBlockIndex = (selectedBlockIndex - 1 + blockTypes.length) % blockTypes.length;
   }
   updateBlockUI();
 });
@@ -114,7 +114,7 @@ renderer.domElement.addEventListener("wheel", (event) => {
 document.addEventListener("keydown", (event) => {
   const num = parseInt(event.key);
   if (num >= 1 && num <= blockTypes.length) {
-    selectedBlock = num - 1;
+    selectedBlockIndex = num - 1;
     updateBlockUI();
   }
 });
@@ -187,7 +187,7 @@ renderer.domElement.addEventListener("mousedown", (event) => {
     const placePos = hit.position.clone().add(hit.normal);
     const blockAtPlace = world.getBlock(placePos.x, placePos.y, placePos.z);
     if (blockAtPlace === undefined || blockAtPlace === 0) {
-      world.setBlock(placePos.x, placePos.y, placePos.z, selectedBlock);
+      world.setBlock(placePos.x, placePos.y, placePos.z, blockTypes[selectedBlockIndex].id);
     }
   }
 });
