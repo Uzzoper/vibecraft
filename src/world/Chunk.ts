@@ -4,6 +4,10 @@ import { BlockType, BLOCKS } from "../Block";
 
 const CHUNK_SIZE = 16;
 const MAX_HEIGHT = 64;
+const LOD_DISTANCE = 2; // LOD 1 starts at this chunk distance
+const LOD_DISTANCE_FAR = 3; // LOD 2 starts at this chunk distance
+
+export type LODLevel = 0 | 1 | 2;
 
 export class Chunk {
   public readonly chunkX: number;

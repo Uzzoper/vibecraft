@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import { World } from "./world/World";
 import { Controls } from "./player/Controls";
+import { MobileControls } from "./player/MobileControls";
 import { Player } from "./player/Player";
-import { BLOCK_TYPES, DEFAULT_BLOCK, BlockType } from "./Block";
+import { BLOCK_TYPES, BlockType } from "./Block";
 
 // Scene setup
 const scene = new THREE.Scene();
@@ -32,7 +33,8 @@ world.update(8, 8); // initial player position
 
 // Controls and Player
 const controls = new Controls(camera, renderer.domElement);
-const player = new Player(camera, controls, world);
+const mobileControls = new MobileControls();
+const player = new Player(camera, controls, world, mobileControls);
 
 // Block selection
 let selectedBlockIndex = 0; // index into blockTypes array
@@ -199,9 +201,31 @@ function animate(): void {
 
   const delta = clock.getDelta();
 
-  if (document.pointerLockElement === renderer.domElement) {
+  const isMobileActive = mobileControls.enabled;
+
+  if (document.pointerLockElement === renderer.domElement || isMobileActive) {
     // Update player
     player.update(delta);
+
+    // Mobile block interaction
+    if (isMobileActive) {
+      if (mobileControls.breakBlock) {
+        const hit = raycastBlock();
+        if (hit) {
+          world.setBlock(hit.position.x, hit.position.y, hit.position.z, 0 as BlockType);
+        }
+      }
+      if (mobileControls.placeBlock) {
+        const hit = raycastBlock();
+        if (hit) {
+          const placePos = hit.position.clone().add(hit.normal);
+          const blockAtPlace = world.getBlock(placePos.x, placePos.y, placePos.z);
+          if (blockAtPlace === undefined || blockAtPlace === 0) {
+            world.setBlock(placePos.x, placePos.y, placePos.z, blockTypes[selectedBlockIndex].id);
+          }
+        }
+      }
+    }
 
     // Update world (load chunks around player)
     world.update(player.position.x, player.position.z);

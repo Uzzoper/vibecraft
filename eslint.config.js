@@ -49,6 +49,8 @@ export default [
       "unicorn/prefer-ternary": "off",
       "unicorn/prefer-number-properties": "off",
       "unicorn/prefer-switch": "off",
+      "unicorn/prefer-query-selector": "off",
+      "unicorn/prefer-spread": "off",
     },
   },
 ];

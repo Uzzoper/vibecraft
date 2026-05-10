@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { Controls } from "./Controls";
+import { MobileControls } from "./MobileControls";
 import { World } from "../world/World";
 
 const SPEED = 5.0;
@@ -7,25 +8,48 @@ const GRAVITY = -10.0;
 const JUMP_FORCE = 1.2;
 const PLAYER_HEIGHT = 2.0;
 const PLAYER_WIDTH = 0.6;
+const MOUSE_SENSITIVITY = 0.002;
 
 export class Player {
   public position: THREE.Vector3;
   public velocity: THREE.Vector3;
   public onGround: boolean = false;
   private controls: Controls;
+  private mobileControls: MobileControls | null;
   private world: World;
   private camera: THREE.Camera;
+  private euler: THREE.Euler;
 
-  constructor(camera: THREE.Camera, controls: Controls, world: World) {
+  constructor(
+    camera: THREE.Camera,
+    controls: Controls,
+    world: World,
+    mobileControls?: MobileControls,
+  ) {
     this.camera = camera;
     this.controls = controls;
+    this.mobileControls = mobileControls || null;
     this.world = world;
-    this.position = new THREE.Vector3(8, 20, 8); // Start above terrain
+    this.position = new THREE.Vector3(8, 20, 8);
     this.velocity = new THREE.Vector3(0, 0, 0);
+    this.euler = new THREE.Euler(0, 0, 0, "YXZ");
     this.updateCamera();
   }
 
   update(deltaTime: number): void {
+    // Camera rotation from mobile controls
+    if (
+      this.mobileControls &&
+      (this.mobileControls.cameraDeltaX !== 0 || this.mobileControls.cameraDeltaY !== 0)
+    ) {
+      this.euler.setFromQuaternion(this.camera.quaternion);
+      this.euler.y -= this.mobileControls.cameraDeltaX * MOUSE_SENSITIVITY;
+      this.euler.x -= this.mobileControls.cameraDeltaY * MOUSE_SENSITIVITY;
+      this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.euler.x));
+      this.camera.quaternion.setFromEuler(this.euler);
+      this.mobileControls.update();
+    }
+
     // Horizontal movement
     const forward = new THREE.Vector3();
     this.camera.getWorldDirection(forward);
@@ -36,10 +60,21 @@ export class Player {
     right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
 
     const moveDir = new THREE.Vector3(0, 0, 0);
+
+    // Desktop controls
     if (this.controls.moveForward) moveDir.add(forward);
     if (this.controls.moveBackward) moveDir.sub(forward);
     if (this.controls.moveRight) moveDir.add(right);
     if (this.controls.moveLeft) moveDir.sub(right);
+
+    // Mobile controls
+    if (
+      this.mobileControls &&
+      (this.mobileControls.moveX !== 0 || this.mobileControls.moveY !== 0)
+    ) {
+      moveDir.add(right.multiplyScalar(this.mobileControls.moveX));
+      moveDir.add(forward.multiplyScalar(-this.mobileControls.moveY));
+    }
 
     if (moveDir.length() > 0) {
       moveDir.normalize().multiplyScalar(SPEED * deltaTime);
@@ -59,7 +94,8 @@ export class Player {
     }
 
     // Jump (only if on ground)
-    if (this.controls.moveUp && this.onGround) {
+    const wantsToJump = this.controls.moveUp || (this.mobileControls?.jump ?? false);
+    if (wantsToJump && this.onGround) {
       this.velocity.y = JUMP_FORCE;
       this.onGround = false;
     }
