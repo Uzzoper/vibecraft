@@ -1,13 +1,80 @@
 import * as THREE from "three";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { BlockType, BLOCKS } from "../Block";
+import { BlockType } from "../Block";
 
 const CHUNK_SIZE = 16;
 const MAX_HEIGHT = 64;
-const LOD_DISTANCE = 2; // LOD 1 starts at this chunk distance
-const LOD_DISTANCE_FAR = 3; // LOD 2 starts at this chunk distance
 
 export type LODLevel = 0 | 1 | 2;
+
+const FACE_DEFINITIONS = [
+  {
+    normal: [1, 0, 0],
+    neighbor: [1, 0, 0],
+    corners: [
+      [1, 0, 0],
+      [1, 1, 0],
+      [1, 1, 1],
+      [1, 0, 1],
+    ],
+  },
+  {
+    normal: [-1, 0, 0],
+    neighbor: [-1, 0, 0],
+    corners: [
+      [0, 0, 1],
+      [0, 1, 1],
+      [0, 1, 0],
+      [0, 0, 0],
+    ],
+  },
+  {
+    normal: [0, 1, 0],
+    neighbor: [0, 1, 0],
+    corners: [
+      [0, 1, 1],
+      [1, 1, 1],
+      [1, 1, 0],
+      [0, 1, 0],
+    ],
+  },
+  {
+    normal: [0, -1, 0],
+    neighbor: [0, -1, 0],
+    corners: [
+      [0, 0, 0],
+      [1, 0, 0],
+      [1, 0, 1],
+      [0, 0, 1],
+    ],
+  },
+  {
+    normal: [0, 0, 1],
+    neighbor: [0, 0, 1],
+    corners: [
+      [0, 0, 1],
+      [1, 0, 1],
+      [1, 1, 1],
+      [0, 1, 1],
+    ],
+  },
+  {
+    normal: [0, 0, -1],
+    neighbor: [0, 0, -1],
+    corners: [
+      [1, 0, 0],
+      [0, 0, 0],
+      [0, 1, 0],
+      [1, 1, 0],
+    ],
+  },
+] as const;
+
+interface MeshBuffers {
+  positions: number[];
+  normals: number[];
+  uvs: number[];
+  indices: number[];
+}
 
 export class Chunk {
   public readonly chunkX: number;
@@ -28,7 +95,7 @@ export class Chunk {
 
   getBlock(x: number, y: number, z: number): BlockType {
     if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= MAX_HEIGHT || z < 0 || z >= CHUNK_SIZE) {
-      return BlockType.Grass; // treat out-of-bounds as air? Actually should be handled by world
+      return BlockType.Air;
     }
     return this.blocks[this.getIndex(x, y, z)] as BlockType;
   }
@@ -51,8 +118,7 @@ export class Chunk {
     const group = new THREE.Group();
     group.position.set(this.chunkX * CHUNK_SIZE, 0, this.chunkZ * CHUNK_SIZE);
 
-    const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-    const geometriesByType = new Map<number, THREE.BufferGeometry[]>();
+    const buffersByType = new Map<number, MeshBuffers>();
 
     for (let y = 0; y < MAX_HEIGHT; y++) {
       for (let z = 0; z < CHUNK_SIZE; z++) {
@@ -60,31 +126,75 @@ export class Chunk {
           const type = this.blocks[this.getIndex(x, y, z)];
           if (type === 0) continue; // air
 
-          const key = type;
-          if (!geometriesByType.has(key)) {
-            geometriesByType.set(key, []);
+          let buffers = buffersByType.get(type);
+          if (!buffers) {
+            buffers = { positions: [], normals: [], uvs: [], indices: [] };
+            buffersByType.set(type, buffers);
           }
-          const geo = boxGeo.clone();
-          geo.translate(x + 0.5, y + 0.5, z + 0.5);
-          geometriesByType.get(key)!.push(geo);
+
+          for (const face of FACE_DEFINITIONS) {
+            const nx = x + face.neighbor[0];
+            const ny = y + face.neighbor[1];
+            const nz = z + face.neighbor[2];
+            if (!this.isFaceVisible(nx, ny, nz)) continue;
+
+            this.addFace(buffers, x, y, z, face.corners, face.normal);
+          }
         }
       }
     }
 
-    for (const [type, geos] of geometriesByType) {
-      if (geos.length === 0) continue;
-      const merged = mergeGeometries(geos);
+    for (const [type, buffers] of buffersByType) {
+      if (buffers.positions.length === 0) continue;
       const material = materials.get(type);
       if (material) {
-        const mesh = new THREE.Mesh(merged, material);
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.Float32BufferAttribute(buffers.positions, 3));
+        geometry.setAttribute("normal", new THREE.Float32BufferAttribute(buffers.normals, 3));
+        geometry.setAttribute("uv", new THREE.Float32BufferAttribute(buffers.uvs, 2));
+        geometry.setIndex(buffers.indices);
+        geometry.computeBoundingSphere();
+
+        const mesh = new THREE.Mesh(geometry, material);
         group.add(mesh);
       }
     }
 
-    boxGeo.dispose();
     this.mesh = group;
     this.dirty = false;
     return group;
+  }
+
+  private isFaceVisible(x: number, y: number, z: number): boolean {
+    if (y < 0) return false;
+    if (x < 0 || x >= CHUNK_SIZE || y >= MAX_HEIGHT || z < 0 || z >= CHUNK_SIZE) return true;
+    return this.blocks[this.getIndex(x, y, z)] === BlockType.Air;
+  }
+
+  private addFace(
+    buffers: MeshBuffers,
+    x: number,
+    y: number,
+    z: number,
+    corners: readonly (readonly [number, number, number])[],
+    normal: readonly [number, number, number],
+  ): void {
+    const vertexIndex = buffers.positions.length / 3;
+
+    for (const [cornerX, cornerY, cornerZ] of corners) {
+      buffers.positions.push(x + cornerX, y + cornerY, z + cornerZ);
+      buffers.normals.push(normal[0], normal[1], normal[2]);
+    }
+
+    buffers.uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
+    buffers.indices.push(
+      vertexIndex,
+      vertexIndex + 1,
+      vertexIndex + 2,
+      vertexIndex,
+      vertexIndex + 2,
+      vertexIndex + 3,
+    );
   }
 
   isDirty(): boolean {

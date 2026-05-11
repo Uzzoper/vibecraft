@@ -5,6 +5,15 @@ import { MobileControls } from "./player/MobileControls";
 import { Player } from "./player/Player";
 import { BLOCK_TYPES, BlockType } from "./Block";
 
+const CHUNK_SIZE = 16;
+const MOBILE_INTERACTION_COOLDOWN = 0.18;
+
+function getRendererPixelRatio(): number {
+  const isTouchDevice = "ontouchstart" in globalThis || navigator.maxTouchPoints > 0;
+  const maxPixelRatio = isTouchDevice ? 1.5 : 2;
+  return Math.min(window.devicePixelRatio, maxPixelRatio);
+}
+
 // Scene setup
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb); // sky blue
@@ -16,7 +25,7 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(getRendererPixelRatio());
 document.body.appendChild(renderer.domElement);
 
 // Lights
@@ -40,8 +49,7 @@ const player = new Player(camera, controls, world, mobileControls);
 let selectedBlockIndex = 0; // index into blockTypes array
 const blockTypes = BLOCK_TYPES;
 
-// Raycaster for block interaction
-const raycaster = new THREE.Raycaster();
+// Raycast state for block interaction
 const rayDirection = new THREE.Vector3();
 
 // Crosshair
@@ -195,6 +203,10 @@ renderer.domElement.addEventListener("mousedown", event => {
 
 // Game loop
 const clock = new THREE.Clock();
+let mobileBreakCooldown = 0;
+let mobilePlaceCooldown = 0;
+let lastPlayerChunkX = Math.floor(player.position.x / CHUNK_SIZE);
+let lastPlayerChunkZ = Math.floor(player.position.z / CHUNK_SIZE);
 
 function animate(): void {
   requestAnimationFrame(animate);
@@ -209,13 +221,17 @@ function animate(): void {
 
     // Mobile block interaction
     if (isMobileActive) {
-      if (mobileControls.breakBlock) {
+      mobileBreakCooldown = Math.max(0, mobileBreakCooldown - delta);
+      mobilePlaceCooldown = Math.max(0, mobilePlaceCooldown - delta);
+
+      if (mobileControls.breakBlock && mobileBreakCooldown === 0) {
         const hit = raycastBlock();
         if (hit) {
           world.setBlock(hit.position.x, hit.position.y, hit.position.z, 0 as BlockType);
         }
+        mobileBreakCooldown = MOBILE_INTERACTION_COOLDOWN;
       }
-      if (mobileControls.placeBlock) {
+      if (mobileControls.placeBlock && mobilePlaceCooldown === 0) {
         const hit = raycastBlock();
         if (hit) {
           const placePos = hit.position.clone().add(hit.normal);
@@ -224,11 +240,17 @@ function animate(): void {
             world.setBlock(placePos.x, placePos.y, placePos.z, blockTypes[selectedBlockIndex].id);
           }
         }
+        mobilePlaceCooldown = MOBILE_INTERACTION_COOLDOWN;
       }
     }
 
-    // Update world (load chunks around player)
-    world.update(player.position.x, player.position.z);
+    const playerChunkX = Math.floor(player.position.x / CHUNK_SIZE);
+    const playerChunkZ = Math.floor(player.position.z / CHUNK_SIZE);
+    if (playerChunkX !== lastPlayerChunkX || playerChunkZ !== lastPlayerChunkZ) {
+      lastPlayerChunkX = playerChunkX;
+      lastPlayerChunkZ = playerChunkZ;
+      world.update(player.position.x, player.position.z);
+    }
   }
 
   renderer.render(scene, camera);
@@ -238,6 +260,7 @@ function animate(): void {
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
+  renderer.setPixelRatio(getRendererPixelRatio());
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 

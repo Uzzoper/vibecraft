@@ -1,11 +1,10 @@
 import * as THREE from "three";
-import { BlockType, BLOCKS } from "../Block";
+import { BlockType } from "../Block";
 import { octaveNoise2D } from "../utils/noise";
 import { createAllMaterials } from "../utils/texture";
 import { Chunk } from "./Chunk";
 
 const CHUNK_SIZE = 16;
-const MAX_HEIGHT = 64;
 const RENDER_DISTANCE = 4; // chunks in each direction
 
 export class World {
@@ -13,6 +12,8 @@ export class World {
   private scene: THREE.Scene;
   private materials: Map<number, THREE.Material>;
   private chunkMeshes = new Map<string, THREE.Group>();
+  private lastCenterCX: number | null = null;
+  private lastCenterCZ: number | null = null;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -109,6 +110,13 @@ export class World {
   update(playerX: number, playerZ: number): void {
     const centerCX = Math.floor(playerX / CHUNK_SIZE);
     const centerCZ = Math.floor(playerZ / CHUNK_SIZE);
+
+    if (centerCX === this.lastCenterCX && centerCZ === this.lastCenterCZ) {
+      return;
+    }
+
+    this.lastCenterCX = centerCX;
+    this.lastCenterCZ = centerCZ;
 
     // Load chunks within render distance
     for (let dx = -RENDER_DISTANCE; dx <= RENDER_DISTANCE; dx++) {
