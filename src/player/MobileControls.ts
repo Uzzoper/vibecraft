@@ -131,6 +131,7 @@ export class MobileControls {
     this.rotateButton.innerHTML = "🔄";
     this.rotateButton.title = "Alternar paisagem";
     this.rotateButton.style.cssText = `
+      position: fixed;
       width: 56px;
       height: 56px;
       border-radius: 50%;
@@ -143,7 +144,7 @@ export class MobileControls {
       user-select: none;
       cursor: pointer;
     `;
-    actionContainer.appendChild(this.rotateButton);
+    document.body.appendChild(this.rotateButton);
 
     // Jump button
     this.jumpButton = document.createElement("button");
@@ -219,25 +220,37 @@ export class MobileControls {
       if (overlay) overlay.style.opacity = "1";
       if (joystick) joystick.style.display = "none";
       if (actions) {
-        actions.style.bottom = "auto";
-        actions.style.top = "50%";
-        actions.style.left = "50%";
-        actions.style.transform = "translate(-50%, -50%)";
+        actions.style.display = "none";
         actions.style.flexDirection = "row";
       }
-      if (rotateBtn) rotateBtn.style.display = "block";
+      if (rotateBtn) {
+        rotateBtn.style.display = "block";
+        rotateBtn.style.top = "max(24px, env(safe-area-inset-top))";
+        rotateBtn.style.right = "max(24px, env(safe-area-inset-right))";
+        rotateBtn.style.bottom = "auto";
+        rotateBtn.style.left = "auto";
+        rotateBtn.style.transform = "none";
+      }
     } else {
       // Landscape: normal layout
       if (overlay) overlay.style.opacity = "0";
       if (joystick) joystick.style.display = "flex";
       if (actions) {
-        actions.style.bottom = "30px";
+        actions.style.display = "flex";
         actions.style.top = "auto";
-        actions.style.left = "30px";
+        actions.style.right = "max(24px, env(safe-area-inset-right))";
+        actions.style.left = "auto";
         actions.style.transform = "none";
         actions.style.flexDirection = "row";
       }
-      if (rotateBtn) rotateBtn.style.display = "block";
+      if (rotateBtn) {
+        rotateBtn.style.display = "block";
+        rotateBtn.style.top = "max(24px, env(safe-area-inset-top))";
+        rotateBtn.style.right = "max(24px, env(safe-area-inset-right))";
+        rotateBtn.style.bottom = "auto";
+        rotateBtn.style.left = "auto";
+        rotateBtn.style.transform = "none";
+      }
 
       // Position joystick bottom-left
       if (joystick) {
@@ -246,10 +259,8 @@ export class MobileControls {
         joystick.style.bottom = "150px";
       }
 
-      // Position action buttons bottom-center
+      // Position action buttons bottom-right
       if (actions) {
-        actions.style.left = "50%";
-        actions.style.transform = "translateX(-50%)";
         actions.style.bottom = "40px";
       }
     }
