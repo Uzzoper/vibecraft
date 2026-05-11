@@ -4,8 +4,9 @@ import { MobileControls } from "./MobileControls";
 import { World } from "../world/World";
 
 const SPEED = 5.0;
-const GRAVITY = -10.0;
-const JUMP_FORCE = 1.2;
+const GRAVITY = -8.0;
+const JUMP_FORCE = 4.5;
+const TERMINAL_FALL_SPEED = -18.0;
 const PLAYER_HEIGHT = 2.0;
 const PLAYER_WIDTH = 0.6;
 const MOUSE_SENSITIVITY = 0.002;
@@ -81,22 +82,24 @@ export class Player {
       this.tryMoveHorizontal(moveDir.x, moveDir.z);
     }
 
-    // Physics — apply gravity first
-    this.velocity.y += GRAVITY * deltaTime;
-    this.velocity.y = Math.max(this.velocity.y, -50); // terminal velocity
-
-    // Move vertically (handles landing and sets onGround)
-    this.tryMoveVertical();
-
-    // After vertical movement, detect walking off edges
-    if (!this.checkGroundBelow() && this.onGround) {
-      this.onGround = false;
-    }
-
     // Jump (only if on ground)
     const wantsToJump = this.controls.moveUp || (this.mobileControls?.jump ?? false);
     if (wantsToJump && this.onGround) {
       this.velocity.y = JUMP_FORCE;
+      this.onGround = false;
+    }
+
+    // Physics
+    if (!this.onGround) {
+      this.velocity.y += GRAVITY * deltaTime;
+      this.velocity.y = Math.max(this.velocity.y, TERMINAL_FALL_SPEED);
+    }
+
+    // Move vertically (handles landing and sets onGround)
+    this.tryMoveVertical(deltaTime);
+
+    // After vertical movement, detect walking off edges
+    if (!this.checkGroundBelow() && this.onGround) {
       this.onGround = false;
     }
 
@@ -133,8 +136,10 @@ export class Player {
     }
   }
 
-  private tryMoveVertical(): void {
-    const dy = this.velocity.y;
+  private tryMoveVertical(deltaTime: number): void {
+    const dy = this.velocity.y * deltaTime;
+    if (dy === 0) return;
+
     const newY = this.position.y + dy;
 
     if (dy < 0) {
@@ -150,7 +155,7 @@ export class Player {
       }
     } else if (dy > 0) {
       // Moving up — check if we hit a block above
-      if (!this.checkCollisionAt(this.position.x, newY + PLAYER_HEIGHT, this.position.z)) {
+      if (!this.checkCollisionAt(this.position.x, newY, this.position.z)) {
         this.position.y = newY;
       } else {
         this.velocity.y = 0;
