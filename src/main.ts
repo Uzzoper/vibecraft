@@ -324,6 +324,14 @@ renderer.domElement.addEventListener("click", () => {
   }
 });
 
+// Mobile: touchend fires even when touchstart's preventDefault blocks click synthesis
+renderer.domElement.addEventListener("touchend", (e) => {
+  if (mobileControls.enabled) {
+    e.preventDefault();
+    setGameActive(true);
+  }
+});
+
 // Remove instructions when pointer is locked (PC)
 document.addEventListener("pointerlockchange", () => {
   if (document.pointerLockElement === renderer.domElement) {
