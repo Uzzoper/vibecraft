@@ -30,6 +30,9 @@ export class MobileControls {
   public placeBlock = false;
   public cameraDeltaX = 0;
   public cameraDeltaY = 0;
+  public isMobile = false;
+  public rotateButton!: HTMLButtonElement;
+  public forcedLandscape = false;
 
   private joystickTouch: TouchState | null = null;
   private cameraTouch: TouchState | null = null;
@@ -38,10 +41,9 @@ export class MobileControls {
   private placeButton!: HTMLButtonElement;
   private joystickElement!: HTMLDivElement;
   private joystickKnob!: HTMLDivElement;
-  private rotateButton!: HTMLButtonElement;
-  private isMobile = false;
-  private forcedLandscape = false;
   private isLandscape = false;
+  private _isVisible = false;
+  private actionContainer!: HTMLDivElement;
 
   constructor() {
     this.isMobile = this.detectTouch();
@@ -115,12 +117,12 @@ export class MobileControls {
     document.body.appendChild(this.joystickElement);
 
     // Action buttons container
-    const actionContainer = document.createElement("div");
-    actionContainer.id = "action-buttons";
-    actionContainer.style.cssText = `
+    this.actionContainer = document.createElement("div");
+    this.actionContainer.id = "action-buttons";
+    this.actionContainer.style.cssText = `
       position: fixed;
       z-index: 1000;
-      display: flex;
+      display: none;
       gap: 12px;
       touch-action: none;
     `;
@@ -164,7 +166,7 @@ export class MobileControls {
       user-select: none;
       cursor: pointer;
     `;
-    actionContainer.appendChild(this.jumpButton);
+    this.actionContainer.appendChild(this.jumpButton);
 
     // Break block button
     this.breakButton = document.createElement("button");
@@ -183,7 +185,7 @@ export class MobileControls {
       user-select: none;
       cursor: pointer;
     `;
-    actionContainer.appendChild(this.breakButton);
+    this.actionContainer.appendChild(this.breakButton);
 
     // Place block button
     this.placeButton = document.createElement("button");
@@ -202,9 +204,9 @@ export class MobileControls {
       user-select: none;
       cursor: pointer;
     `;
-    actionContainer.appendChild(this.placeButton);
+    this.actionContainer.appendChild(this.placeButton);
 
-    document.body.appendChild(actionContainer);
+    document.body.appendChild(this.actionContainer);
 
     this.repositionControls();
   }
@@ -234,9 +236,9 @@ export class MobileControls {
     } else {
       // Landscape: normal layout
       if (overlay) overlay.style.opacity = "0";
-      if (joystick) joystick.style.display = "flex";
+      if (joystick) joystick.style.display = this._isVisible ? "flex" : "none";
       if (actions) {
-        actions.style.display = "flex";
+        actions.style.display = this._isVisible ? "flex" : "none";
         actions.style.top = "auto";
         actions.style.right = "max(24px, env(safe-area-inset-right))";
         actions.style.left = "auto";
@@ -264,6 +266,16 @@ export class MobileControls {
         actions.style.bottom = "40px";
       }
     }
+  }
+
+  public show(): void {
+    this._isVisible = true;
+    this.repositionControls();
+  }
+
+  public hide(): void {
+    this._isVisible = false;
+    this.repositionControls();
   }
 
   private setupEventListeners(): void {

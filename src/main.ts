@@ -281,13 +281,55 @@ instructions.style.fontSize = "24px";
 instructions.style.textAlign = "center";
 instructions.style.zIndex = "2000";
 instructions.style.pointerEvents = "none";
-instructions.innerHTML =
-  "Click to play<br>WASD: Move<br>Space: Jump<br>Left Click: Remove Block<br>Right Click: Place Block<br>Scroll/1-5: Select Block";
+instructions.style.textShadow = "2px 2px 4px rgba(0,0,0,0.5)";
+
+function updateInstructions(): void {
+  if (mobileControls.enabled) {
+    instructions.innerHTML =
+      "Click to play<br><br>Joystick: Move<br>Buttons: Jump/Break/Place<br>Rotate: Toggle Landscape";
+  } else {
+    instructions.innerHTML =
+      "Click to play<br><br>WASD: Move<br>Space: Jump<br>Left Click: Remove Block<br>Right Click: Place Block<br>Scroll/1-5: Select Block";
+  }
+}
+
+updateInstructions();
 document.body.appendChild(instructions);
 
-// Remove instructions when pointer is locked
+function setGameActive(active: boolean): void {
+  if (active) {
+    instructions.style.display = "none";
+    crosshair.style.display = "block";
+    blockUI.style.display = "flex";
+    if (mobileControls.enabled) {
+      mobileControls.show();
+    }
+  } else {
+    instructions.style.display = "block";
+    crosshair.style.display = "none";
+    blockUI.style.display = "none";
+    if (mobileControls.enabled) {
+      mobileControls.hide();
+    }
+  }
+}
+
+// Initial state
+setGameActive(false);
+
+// Handle clicks for both PC and Mobile
+renderer.domElement.addEventListener("click", () => {
+  if (mobileControls.enabled) {
+    setGameActive(true);
+  }
+});
+
+// Remove instructions when pointer is locked (PC)
 document.addEventListener("pointerlockchange", () => {
   if (document.pointerLockElement === renderer.domElement) {
-    instructions.style.display = "none";
+    setGameActive(true);
+  } else if (!mobileControls.enabled) {
+    // Only show back on PC when unlocking
+    setGameActive(false);
   }
 });
