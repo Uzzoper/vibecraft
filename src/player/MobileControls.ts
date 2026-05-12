@@ -356,7 +356,7 @@ export class MobileControls {
             this.isLandscape = true;
             this.repositionControls();
             this.rotateButton.innerHTML = "🔒";
-            this.rotateButton.title = "Desbloquear orientação";
+            this.rotateButton.title = "Unlock orientation";
           })
           .catch(() => {
             this.forcedLandscape = false;

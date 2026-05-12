@@ -4,6 +4,7 @@ import { Controls } from "./player/Controls";
 import { MobileControls } from "./player/MobileControls";
 import { Player } from "./player/Player";
 import { BLOCK_TYPES, BlockType } from "./Block";
+import { AudioManager } from "./utils/AudioManager";
 
 const CHUNK_SIZE = 16;
 const MOBILE_INTERACTION_COOLDOWN = 0.18;
@@ -43,7 +44,7 @@ world.update(8, 8); // initial player position
 // Controls and Player
 const controls = new Controls(camera, renderer.domElement);
 const mobileControls = new MobileControls();
-const player = new Player(camera, controls, world, mobileControls);
+const audioManager = AudioManager.get();
 
 // Block selection
 let selectedBlockIndex = 0; // index into blockTypes array
@@ -133,7 +134,7 @@ document.addEventListener("keydown", event => {
 // Raycast helper
 function raycastBlock(): { position: THREE.Vector3; normal: THREE.Vector3 } | null {
   camera.getWorldDirection(rayDirection);
-  const origin = player.getEyePosition();
+  const origin = player!.getEyePosition();
   const step = 0.1;
   const maxSteps = 60;
 
@@ -191,22 +192,27 @@ renderer.domElement.addEventListener("mousedown", event => {
   if (event.button === 0) {
     // Left click: remove block
     world.setBlock(hit.position.x, hit.position.y, hit.position.z, 0 as BlockType);
+    audioManager.play("break", 0.5);
   } else if (event.button === 2) {
     // Right click: place block
     const placePos = hit.position.clone().add(hit.normal);
     const blockAtPlace = world.getBlock(placePos.x, placePos.y, placePos.z);
     if (blockAtPlace === undefined || blockAtPlace === 0) {
       world.setBlock(placePos.x, placePos.y, placePos.z, blockTypes[selectedBlockIndex].id);
+      audioManager.play("place", 0.5);
     }
   }
 });
+
+// Create player after audio init
+let player: Player;
 
 // Game loop
 const clock = new THREE.Clock();
 let mobileBreakCooldown = 0;
 let mobilePlaceCooldown = 0;
-let lastPlayerChunkX = Math.floor(player.position.x / CHUNK_SIZE);
-let lastPlayerChunkZ = Math.floor(player.position.z / CHUNK_SIZE);
+let lastPlayerChunkX = 0;
+let lastPlayerChunkZ = 0;
 
 function animate(): void {
   requestAnimationFrame(animate);
@@ -228,6 +234,7 @@ function animate(): void {
         const hit = raycastBlock();
         if (hit) {
           world.setBlock(hit.position.x, hit.position.y, hit.position.z, 0 as BlockType);
+          audioManager.play("break", 0.5);
         }
         mobileBreakCooldown = MOBILE_INTERACTION_COOLDOWN;
       }
@@ -238,6 +245,7 @@ function animate(): void {
           const blockAtPlace = world.getBlock(placePos.x, placePos.y, placePos.z);
           if (blockAtPlace === undefined || blockAtPlace === 0) {
             world.setBlock(placePos.x, placePos.y, placePos.z, blockTypes[selectedBlockIndex].id);
+            audioManager.play("place", 0.5);
           }
         }
         mobilePlaceCooldown = MOBILE_INTERACTION_COOLDOWN;
@@ -266,9 +274,6 @@ window.addEventListener("resize", () => {
 
 // Prevent context menu on right click
 renderer.domElement.addEventListener("contextmenu", e => e.preventDefault());
-
-// Start game loop
-animate();
 
 // Initial instructions
 const instructions = document.createElement("div");
@@ -317,27 +322,37 @@ function setGameActive(active: boolean): void {
 // Initial state
 setGameActive(false);
 
-// Handle clicks for both PC and Mobile
-renderer.domElement.addEventListener("click", () => {
-  if (mobileControls.enabled) {
-    setGameActive(true);
-  }
-});
+// Load sounds and init player
+audioManager.loadAll().then(() => {
+  player = new Player(camera, controls, world, mobileControls, audioManager);
+  lastPlayerChunkX = Math.floor(player.position.x / CHUNK_SIZE);
+  lastPlayerChunkZ = Math.floor(player.position.z / CHUNK_SIZE);
 
-// Mobile: touchend fires even when touchstart's preventDefault blocks click synthesis
-renderer.domElement.addEventListener("touchend", (e) => {
-  if (mobileControls.enabled) {
-    e.preventDefault();
-    setGameActive(true);
-  }
-});
+  // Handle clicks for both PC and Mobile
+  renderer.domElement.addEventListener("click", () => {
+    if (mobileControls.enabled) {
+      setGameActive(true);
+    }
+  });
 
-// Remove instructions when pointer is locked (PC)
-document.addEventListener("pointerlockchange", () => {
-  if (document.pointerLockElement === renderer.domElement) {
-    setGameActive(true);
-  } else if (!mobileControls.enabled) {
-    // Only show back on PC when unlocking
-    setGameActive(false);
-  }
+  // Mobile: touchend fires even when touchstart's preventDefault blocks click synthesis
+  renderer.domElement.addEventListener("touchend", (e) => {
+    if (mobileControls.enabled) {
+      e.preventDefault();
+      setGameActive(true);
+    }
+  });
+
+  // Remove instructions when pointer is locked (PC)
+  document.addEventListener("pointerlockchange", () => {
+    if (document.pointerLockElement === renderer.domElement) {
+      setGameActive(true);
+    } else if (!mobileControls.enabled) {
+      // Only show back on PC when unlocking
+      setGameActive(false);
+    }
+  });
+
+  // Start game loop
+  animate();
 });

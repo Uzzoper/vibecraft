@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { Controls } from "./Controls";
 import { MobileControls } from "./MobileControls";
 import { World } from "../world/World";
+import { AudioManager } from "../utils/AudioManager";
 
 const SPEED = 5.0;
 const GRAVITY = -8.0;
@@ -20,17 +21,20 @@ export class Player {
   private world: World;
   private camera: THREE.Camera;
   private euler: THREE.Euler;
+  private audio: AudioManager;
 
   constructor(
     camera: THREE.Camera,
     controls: Controls,
     world: World,
     mobileControls?: MobileControls,
+    audio?: AudioManager,
   ) {
     this.camera = camera;
     this.controls = controls;
     this.mobileControls = mobileControls || null;
     this.world = world;
+    this.audio = audio || AudioManager.get();
     this.position = new THREE.Vector3(8, 20, 8);
     this.velocity = new THREE.Vector3(0, 0, 0);
     this.euler = new THREE.Euler(0, 0, 0, "YXZ");
@@ -77,7 +81,8 @@ export class Player {
       moveDir.add(forward.multiplyScalar(-this.mobileControls.moveY));
     }
 
-    if (moveDir.length() > 0) {
+    const isMoving = moveDir.length() > 0;
+    if (isMoving) {
       moveDir.normalize().multiplyScalar(SPEED * deltaTime);
       this.tryMoveHorizontal(moveDir.x, moveDir.z);
     }
@@ -87,6 +92,7 @@ export class Player {
     if (wantsToJump && this.onGround) {
       this.velocity.y = JUMP_FORCE;
       this.onGround = false;
+      this.audio.play("jump", 0.6);
     }
 
     // Physics
@@ -102,6 +108,9 @@ export class Player {
     if (!this.checkGroundBelow() && this.onGround) {
       this.onGround = false;
     }
+
+    // Footsteps
+    this.audio.updateFootsteps(deltaTime, this.onGround, isMoving);
 
     this.updateCamera();
   }
