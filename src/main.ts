@@ -323,36 +323,35 @@ function setGameActive(active: boolean): void {
 setGameActive(false);
 
 // Load sounds and init player
-audioManager.loadAll().then(() => {
-  player = new Player(camera, controls, world, mobileControls, audioManager);
-  lastPlayerChunkX = Math.floor(player.position.x / CHUNK_SIZE);
-  lastPlayerChunkZ = Math.floor(player.position.z / CHUNK_SIZE);
+await audioManager.loadAll();
+player = new Player(camera, controls, world, mobileControls, audioManager);
+lastPlayerChunkX = Math.floor(player.position.x / CHUNK_SIZE);
+lastPlayerChunkZ = Math.floor(player.position.z / CHUNK_SIZE);
 
-  // Handle clicks for both PC and Mobile
-  renderer.domElement.addEventListener("click", () => {
-    if (mobileControls.enabled) {
-      setGameActive(true);
-    }
-  });
-
-  // Mobile: touchend fires even when touchstart's preventDefault blocks click synthesis
-  renderer.domElement.addEventListener("touchend", (e) => {
-    if (mobileControls.enabled) {
-      e.preventDefault();
-      setGameActive(true);
-    }
-  });
-
-  // Remove instructions when pointer is locked (PC)
-  document.addEventListener("pointerlockchange", () => {
-    if (document.pointerLockElement === renderer.domElement) {
-      setGameActive(true);
-    } else if (!mobileControls.enabled) {
-      // Only show back on PC when unlocking
-      setGameActive(false);
-    }
-  });
-
-  // Start game loop
-  animate();
+// Handle clicks for both PC and Mobile
+renderer.domElement.addEventListener("click", () => {
+  if (mobileControls.enabled) {
+    setGameActive(true);
+  }
 });
+
+// Mobile: touchend fires even when touchstart's preventDefault blocks click synthesis
+renderer.domElement.addEventListener("touchend", e => {
+  if (mobileControls.enabled) {
+    e.preventDefault();
+    setGameActive(true);
+  }
+});
+
+// Remove instructions when pointer is locked (PC)
+document.addEventListener("pointerlockchange", () => {
+  if (document.pointerLockElement === renderer.domElement) {
+    setGameActive(true);
+  } else if (!mobileControls.enabled) {
+    // Only show back on PC when unlocking
+    setGameActive(false);
+  }
+});
+
+// Start game loop
+animate();
