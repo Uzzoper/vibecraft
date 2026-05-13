@@ -5,6 +5,7 @@ import { MobileControls } from "./player/MobileControls";
 import { Player } from "./player/Player";
 import { BLOCK_TYPES, BlockType } from "./Block";
 import { AudioManager } from "./utils/AudioManager";
+import "./globals.css";
 
 const CHUNK_SIZE = 16;
 const MOBILE_INTERACTION_COOLDOWN = 0.18;
@@ -55,28 +56,12 @@ const rayDirection = new THREE.Vector3();
 
 // Crosshair
 const crosshair = document.createElement("div");
-crosshair.style.position = "fixed";
-crosshair.style.top = "50%";
-crosshair.style.left = "50%";
-crosshair.style.transform = "translate(-50%, -50%)";
-crosshair.style.width = "4px";
-crosshair.style.height = "4px";
-crosshair.style.backgroundColor = "white";
-crosshair.style.borderRadius = "50%";
-crosshair.style.pointerEvents = "none";
-crosshair.style.zIndex = "1000";
+crosshair.id = "crosshair";
 document.body.appendChild(crosshair);
 
 // Block selection UI
 const blockUI = document.createElement("div");
-blockUI.style.position = "fixed";
-blockUI.style.bottom = "20px";
-blockUI.style.left = "50%";
-blockUI.style.transform = "translateX(-50%)";
-blockUI.style.display = "flex";
-blockUI.style.gap = "8px";
-blockUI.style.zIndex = "1000";
-blockUI.style.pointerEvents = "none";
+blockUI.id = "block-ui";
 document.body.appendChild(blockUI);
 
 function updateBlockUI(): void {
@@ -275,18 +260,17 @@ window.addEventListener("resize", () => {
 // Prevent context menu on right click
 renderer.domElement.addEventListener("contextmenu", e => e.preventDefault());
 
+// Title
+const title = document.createElement("div");
+title.id = "game-title";
+title.textContent = "VIBECRAFTLAND";
+document.body.appendChild(title);
+
+
+
 // Initial instructions
 const instructions = document.createElement("div");
-instructions.style.position = "fixed";
-instructions.style.top = "50%";
-instructions.style.left = "50%";
-instructions.style.transform = "translate(-50%, -50%)";
-instructions.style.color = "white";
-instructions.style.fontSize = "24px";
-instructions.style.textAlign = "center";
-instructions.style.zIndex = "2000";
-instructions.style.pointerEvents = "none";
-instructions.style.textShadow = "2px 2px 4px rgba(0,0,0,0.5)";
+instructions.id = "instructions";
 
 function updateInstructions(): void {
   if (mobileControls.enabled) {
@@ -304,6 +288,7 @@ document.body.appendChild(instructions);
 function setGameActive(active: boolean): void {
   if (active) {
     instructions.style.display = "none";
+    title.style.display = "none";
     crosshair.style.display = "block";
     blockUI.style.display = "flex";
     if (mobileControls.enabled) {
@@ -311,6 +296,7 @@ function setGameActive(active: boolean): void {
     }
   } else {
     instructions.style.display = "block";
+    title.style.display = "block";
     crosshair.style.display = "none";
     blockUI.style.display = "none";
     if (mobileControls.enabled) {

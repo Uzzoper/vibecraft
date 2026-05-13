@@ -71,139 +71,51 @@ export class MobileControls {
     // Orientation info overlay
     const overlay = document.createElement("div");
     overlay.id = "orientation-overlay";
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.8);
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 24px;
-      z-index: 9999;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.3s;
-    `;
     overlay.textContent = "🔄 Gire o dispositivo para modo paisagem";
     document.body.appendChild(overlay);
 
     // Joystick container (floating)
     this.joystickElement = document.createElement("div");
     this.joystickElement.id = "joystick";
-    this.joystickElement.style.cssText = `
-      position: fixed;
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.15);
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      touch-action: none;
-    `;
 
     this.joystickKnob = document.createElement("div");
-    this.joystickKnob.style.cssText = `
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.5);
-      position: absolute;
-    `;
+    this.joystickKnob.id = "joystick-knob";
     this.joystickElement.appendChild(this.joystickKnob);
     document.body.appendChild(this.joystickElement);
 
     // Action buttons container
     this.actionContainer = document.createElement("div");
     this.actionContainer.id = "action-buttons";
-    this.actionContainer.style.cssText = `
-      position: fixed;
-      z-index: 1000;
-      display: none;
-      gap: 12px;
-      touch-action: none;
-    `;
 
     // Rotate button
     this.rotateButton = document.createElement("button");
     this.rotateButton.id = "rotate-btn";
     this.rotateButton.innerHTML = "🔄";
     this.rotateButton.title = "Alternar paisagem";
-    this.rotateButton.style.cssText = `
-      position: fixed;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: rgba(100, 100, 255, 0.4);
-      border: 2px solid rgba(255, 255, 255, 0.5);
-      color: white;
-      font-size: 24px;
-      z-index: 1001;
-      touch-action: none;
-      user-select: none;
-      cursor: pointer;
-    `;
     document.body.appendChild(this.rotateButton);
 
     // Jump button
     this.jumpButton = document.createElement("button");
+    this.jumpButton.id = "jump-btn";
+    this.jumpButton.className = "action-btn";
     this.jumpButton.textContent = "⬆";
     this.jumpButton.title = "Pular";
-    this.jumpButton.style.cssText = `
-      width: 70px;
-      height: 70px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.3);
-      border: 2px solid rgba(255, 255, 255, 0.5);
-      color: white;
-      font-weight: bold;
-      font-size: 18px;
-      z-index: 1000;
-      touch-action: none;
-      user-select: none;
-      cursor: pointer;
-    `;
     this.actionContainer.appendChild(this.jumpButton);
 
     // Break block button
     this.breakButton = document.createElement("button");
+    this.breakButton.id = "break-btn";
+    this.breakButton.className = "action-btn";
     this.breakButton.textContent = "⛏";
     this.breakButton.title = "Quebrar bloco";
-    this.breakButton.style.cssText = `
-      width: 70px;
-      height: 70px;
-      border-radius: 50%;
-      background: rgba(255, 68, 68, 0.5);
-      border: 2px solid rgba(255, 255, 255, 0.5);
-      color: white;
-      font-size: 24px;
-      z-index: 1000;
-      touch-action: none;
-      user-select: none;
-      cursor: pointer;
-    `;
     this.actionContainer.appendChild(this.breakButton);
 
     // Place block button
     this.placeButton = document.createElement("button");
+    this.placeButton.id = "place-btn";
+    this.placeButton.className = "action-btn";
     this.placeButton.textContent = "🧱";
     this.placeButton.title = "Colocar bloco";
-    this.placeButton.style.cssText = `
-      width: 70px;
-      height: 70px;
-      border-radius: 50%;
-      background: rgba(68, 255, 68, 0.5);
-      border: 2px solid rgba(255, 255, 255, 0.5);
-      color: white;
-      font-size: 24px;
-      z-index: 1000;
-      touch-action: none;
-      user-select: none;
-      cursor: pointer;
-    `;
     this.actionContainer.appendChild(this.placeButton);
 
     document.body.appendChild(this.actionContainer);

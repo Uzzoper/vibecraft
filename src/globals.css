@@ -1,0 +1,212 @@
+/* ==========================================================================
+   Source: index.html — Base reset & canvas styles
+   ========================================================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
+
+canvas {
+  display: block;
+}
+
+/* ==========================================================================
+   Source: src/main.ts — HUD, title, and instruction styles
+   ========================================================================== */
+
+/* Crosshair dot */
+#crosshair {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 4px;
+  background: white;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Block selector UI container */
+#block-ui {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+/* Game title */
+#game-title {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 22%;
+  font-size: 56px;
+  font-weight: 900;
+  text-align: center;
+  z-index: 2001;
+  pointer-events: none;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 4px;
+  background: linear-gradient(90deg, #ff6ec7, #ffd93d, #6ec6ff, #8bff6e, #c46eff, #ff6ec7);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter:
+    drop-shadow(0 0 12px rgba(255, 110, 199, 0.6))
+    drop-shadow(0 0 24px rgba(110, 198, 255, 0.4))
+    drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.6));
+  animation:
+    vibePulse 2s ease-in-out infinite,
+    titleHue 4s linear infinite;
+}
+
+/* Instruction overlay */
+#instructions {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 24px;
+  text-align: center;
+  z-index: 2000;
+  pointer-events: none;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* ==========================================================================
+   Source: src/player/MobileControls.ts — Mobile UI styles
+   ========================================================================== */
+
+/* Orientation lock overlay */
+#orientation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* Joystick container */
+#joystick {
+  position: fixed;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  touch-action: none;
+}
+
+/* Joystick inner knob */
+#joystick-knob {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  position: absolute;
+}
+
+/* Action buttons container */
+#action-buttons {
+  position: fixed;
+  z-index: 1000;
+  display: none;
+  gap: 12px;
+  touch-action: none;
+}
+
+/* Rotate orientation button */
+#rotate-btn {
+  position: fixed;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(100, 100, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: white;
+  font-size: 24px;
+  z-index: 1001;
+  touch-action: none;
+  user-select: none;
+  cursor: pointer;
+}
+
+/* Shared styles for jump / break / place buttons */
+.action-btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: white;
+  font-size: 24px;
+  z-index: 1000;
+  touch-action: none;
+  user-select: none;
+  cursor: pointer;
+}
+
+/* Jump button */
+#jump-btn {
+  background: rgba(255, 255, 255, 0.3);
+  font-weight: bold;
+  font-size: 18px;
+}
+
+/* Break button */
+#break-btn {
+  background: rgba(255, 68, 68, 0.5);
+}
+
+/* Place button */
+#place-btn {
+  background: rgba(68, 255, 68, 0.5);
+}
+
+/* ==========================================================================
+   Keyframe Animations
+   ========================================================================== */
+
+@keyframes vibePulse {
+  0%, 100% {
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.05);
+  }
+}
+
+@keyframes titleHue {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
