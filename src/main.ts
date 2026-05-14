@@ -13,7 +13,6 @@ const MOBILE_INTERACTION_COOLDOWN = 0.18;
 
 // Day/night cycle constants
 const CYCLE_DURATION = 300; // 5 minutes in seconds (150 day + 150 night)
-const HALF_CYCLE = CYCLE_DURATION / 2;
 
 function getRendererPixelRatio(): number {
   const isTouchDevice = "ontouchstart" in globalThis || navigator.maxTouchPoints > 0;
