@@ -52,8 +52,7 @@ canvas {
   left: 50%;
   transform: translateX(-50%);
   top: 22%;
-  font-size: 56px;
-  font-weight: 900;
+  font-size: clamp(24px, 7vw, 56px);
   text-align: center;
   z-index: 2001;
   pointer-events: none;
@@ -85,6 +84,19 @@ canvas {
   z-index: 2000;
   pointer-events: none;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Mobile: put title above the tutorial */
+@media (max-width: 768px), (max-height: 600px), (pointer: coarse) {
+  #game-title {
+    top: 8%;
+    font-size: clamp(20px, 5vw, 36px);
+  }
+
+  #instructions {
+    top: 55%;
+    font-size: 14px;
+  }
 }
 
 /* ==========================================================================
