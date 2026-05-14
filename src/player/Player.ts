@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { Controls } from "./Controls";
 import { MobileControls } from "./MobileControls";
+import { BlockType } from "../Block";
 import { World } from "../world/World";
 import { AudioManager } from "../utils/AudioManager";
 
@@ -16,12 +17,15 @@ export class Player {
   public position: THREE.Vector3;
   public velocity: THREE.Vector3;
   public onGround: boolean = false;
+  public health: number = 20;
+  public maxHealth: number = 20;
   private controls: Controls;
   private mobileControls: MobileControls | null;
-  private world: World;
+  public world: World;
   private camera: THREE.Camera;
   private euler: THREE.Euler;
   private audio: AudioManager;
+  public invincibleTimer: number = 0;
 
   constructor(
     camera: THREE.Camera,
@@ -192,7 +196,30 @@ export class Player {
 
   private isSolidBlock(bx: number, by: number, bz: number): boolean {
     const block = this.world.getBlock(bx, by, bz);
-    return block !== undefined && block > 0;
+    return block !== undefined && block > 0 && block !== BlockType.Water;
+  }
+
+  private isInWater(): boolean {
+    const bx = Math.floor(this.position.x);
+    const by = Math.floor(this.position.y);
+    const bz = Math.floor(this.position.z);
+    return this.world.getBlock(bx, by, bz) === BlockType.Water;
+  }
+
+  damage(amount: number): void {
+    if (this.invincibleTimer > 0) return;
+    this.health -= amount;
+    this.invincibleTimer = 1.0; // 1 second of invincibility
+    if (this.health <= 0) {
+      this.health = 0;
+      this.respawn();
+    }
+  }
+
+  private respawn(): void {
+    this.position.set(8, 20, 8);
+    this.velocity.set(0, 0, 0);
+    this.health = this.maxHealth;
   }
 
   private updateCamera(): void {

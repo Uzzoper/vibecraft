@@ -2,6 +2,7 @@ const SOUND_PATHS: Record<string, string> = {
   break: "/sounds/break.ogg",
   jump: "/sounds/jump.ogg",
   place: "/sounds/place.ogg",
+  zombie: "/sounds/zombie.ogg",
 };
 
 export class AudioManager {
@@ -12,7 +13,10 @@ export class AudioManager {
   private stepInterval = 0.35;
 
   private constructor() {
-    this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const AC =
+      globalThis.AudioContext ??
+      (globalThis as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    this.ctx = new AC();
   }
 
   static get(): AudioManager {
@@ -34,8 +38,8 @@ export class AudioManager {
     let startOffset = buffer.length;
     for (let ch = 0; ch < channels; ch++) {
       const data = buffer.getChannelData(ch);
-      for (let i = 0; i < data.length; i++) {
-        if (Math.abs(data[i]) > threshold) {
+      for (const [i, sample] of data.entries()) {
+        if (Math.abs(sample) > threshold) {
           if (i < startOffset) startOffset = i;
           break;
         }
@@ -65,8 +69,8 @@ export class AudioManager {
 
   private loadSound(path: string): Promise<AudioBuffer> {
     return fetch(path)
-      .then((res) => res.arrayBuffer())
-      .then((data) => this.ctx.decodeAudioData(data));
+      .then(res => res.arrayBuffer())
+      .then(data => this.ctx.decodeAudioData(data));
   }
 
   play(name: string, volume: number = 0.5): void {
