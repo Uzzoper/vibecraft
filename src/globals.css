@@ -86,6 +86,19 @@ canvas {
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Mobile: put title above the tutorial */
+@media (max-width: 768px), (max-height: 600px), (pointer: coarse) {
+  #game-title {
+    top: 8%;
+    font-size: clamp(20px, 5vw, 36px);
+  }
+
+  #instructions {
+    top: 55%;
+    font-size: 14px;
+  }
+}
+
 /* ==========================================================================
    Source: src/player/MobileControls.ts — Mobile UI styles
    ========================================================================== */
