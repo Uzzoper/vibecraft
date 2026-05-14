@@ -52,8 +52,7 @@ canvas {
   left: 50%;
   transform: translateX(-50%);
   top: 22%;
-  font-size: 56px;
-  font-weight: 900;
+  font-size: clamp(24px, 7vw, 56px);
   text-align: center;
   z-index: 2001;
   pointer-events: none;
