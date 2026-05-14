@@ -13,7 +13,6 @@ const MOBILE_INTERACTION_COOLDOWN = 0.18;
 
 // Day/night cycle constants
 const CYCLE_DURATION = 300; // 5 minutes in seconds (150 day + 150 night)
-const HALF_CYCLE = CYCLE_DURATION / 2;
 
 function getRendererPixelRatio(): number {
   const isTouchDevice = "ontouchstart" in globalThis || navigator.maxTouchPoints > 0;
@@ -400,7 +399,11 @@ function updateHUD(): void {
 
   // Cycle indicator
   const isNight = Math.sin(getSunAngle()) < 0;
-  const minutesLeft = ((isNight ? HALF_CYCLE : CYCLE_DURATION) - (cycleTime % HALF_CYCLE)) / 60;
+  const sunAngle = getSunAngle();
+  const currentQuadrant = Math.floor(sunAngle / Math.PI);
+  const nextCrossing = (currentQuadrant + 1) * Math.PI;
+  const secondsLeft = (nextCrossing - sunAngle) / SUN_ANGLE_SPEED;
+  const minutesLeft = secondsLeft / 60;
   cycleIndicator.textContent = isNight
     ? `🌙 Noite - ${minutesLeft.toFixed(0)} min até o dia`
     : `☀️ Dia - ${minutesLeft.toFixed(0)} min até a noite`;
