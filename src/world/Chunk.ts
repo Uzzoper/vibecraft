@@ -136,7 +136,7 @@ export class Chunk {
             const nx = x + face.neighbor[0];
             const ny = y + face.neighbor[1];
             const nz = z + face.neighbor[2];
-            if (!this.isFaceVisible(nx, ny, nz)) continue;
+            if (!this.isFaceVisible(nx, ny, nz, type)) continue;
 
             this.addFace(buffers, x, y, z, face.corners, face.normal);
           }
@@ -165,10 +165,14 @@ export class Chunk {
     return group;
   }
 
-  private isFaceVisible(x: number, y: number, z: number): boolean {
+  private isFaceVisible(x: number, y: number, z: number, currentBlockType: BlockType): boolean {
     if (y < 0) return false;
     if (x < 0 || x >= CHUNK_SIZE || y >= MAX_HEIGHT || z < 0 || z >= CHUNK_SIZE) return true;
-    return this.blocks[this.getIndex(x, y, z)] === BlockType.Air;
+    const neighbor = this.blocks[this.getIndex(x, y, z)];
+    if (neighbor === BlockType.Air) return true;
+    // Solid blocks show face toward water (prevents see-through cave walls)
+    if (neighbor === BlockType.Water) return currentBlockType !== BlockType.Water;
+    return false;
   }
 
   private addFace(
