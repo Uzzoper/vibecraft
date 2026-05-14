@@ -72,3 +72,33 @@ export function octaveNoise2D(
 
   return total / maxValue;
 }
+
+// Simple 3D noise by combining 2D noise slices
+export function noise3D(x: number, y: number, z: number): number {
+  const n1 = noise2D(x + y * 12.9898, z + y * 78.233);
+  const n2 = noise2D(x * 1.134 + z * 0.671, y + x * 0.456);
+  const n3 = noise2D(x * 0.7 - z, y * 1.3 + z * 0.9);
+  return (n1 + n2 + n3) / 3;
+}
+
+export function octaveNoise3D(
+  x: number,
+  y: number,
+  z: number,
+  octaves: number,
+  persistence: number = 0.5,
+): number {
+  let total = 0;
+  let frequency = 1;
+  let amplitude = 1;
+  let maxValue = 0;
+
+  for (let i = 0; i < octaves; i++) {
+    total += noise3D(x * frequency, y * frequency, z * frequency) * amplitude;
+    maxValue += amplitude;
+    amplitude *= persistence;
+    frequency *= 2;
+  }
+
+  return total / maxValue;
+}

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { BLOCKS, BlockDefinition } from "../Block";
+import { BLOCKS, BlockDefinition, BlockType } from "../Block";
 
 const textureLoader = new THREE.TextureLoader();
 const cache = new Map<string, THREE.Texture>();
@@ -17,6 +17,14 @@ export function loadBlockTexture(def: BlockDefinition): THREE.Texture {
 
 export function createBlockMaterial(def: BlockDefinition): THREE.Material {
   const texture = loadBlockTexture(def);
+  if (def.id === BlockType.Water) {
+    return new THREE.MeshLambertMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0.65,
+      side: THREE.DoubleSide,
+    });
+  }
   return new THREE.MeshLambertMaterial({ map: texture });
 }
 

@@ -1,12 +1,14 @@
 import * as THREE from "three";
 import { BlockType } from "../Block";
-import { octaveNoise2D } from "../utils/noise";
+import { octaveNoise2D, octaveNoise3D } from "../utils/noise";
 import { createAllMaterials } from "../utils/texture";
 import { Chunk } from "./Chunk";
 
 const CHUNK_SIZE = 16;
 const MAX_HEIGHT = 64;
 const RENDER_DISTANCE = 4; // chunks in each direction
+const CAVE_THRESHOLD = 0.35; // noise value below this = air (cave)
+const CAVE_WATER_LEVEL = 10; // water fills caves below this y level
 
 export class World {
   private chunks = new Map<string, Chunk>();
@@ -52,8 +54,92 @@ export class World {
       }
     }
 
+    // Carve caves using 3D noise
+    this.carveCaves(chunk, baseX, baseZ);
+
+    // Fill low caves with water
+    this.fillCaveWater(chunk);
+
     // Generate trees on top of grass surfaces
     this.generateTrees(chunk, baseX, baseZ);
+  }
+
+  private carveCaves(chunk: Chunk, baseX: number, baseZ: number): void {
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+      for (let z = 0; z < CHUNK_SIZE; z++) {
+        for (let y = 1; y < MAX_HEIGHT - 1; y++) {
+          const worldX = baseX + x;
+          const worldY = y;
+          const worldZ = baseZ + z;
+
+          // Only carve into stone and dirt (not grass surface or water)
+          const currentBlock = chunk.getBlock(x, y, z);
+          if (currentBlock !== BlockType.Stone && currentBlock !== BlockType.Dirt) continue;
+
+          // Skip very high terrain (keep surfaces intact)
+          const surfaceNoise = octaveNoise2D(worldX * 0.1, worldZ * 0.1, 4, 0.5);
+          const surfaceHeight = Math.floor(THREE.MathUtils.mapLinear(surfaceNoise, -1, 1, 2, 14));
+          if (y >= surfaceHeight - 2) continue;
+
+          // 3D noise for cave carving
+          const caveNoise = octaveNoise3D(worldX * 0.08, worldY * 0.08, worldZ * 0.08, 3, 0.5);
+          if (caveNoise > CAVE_THRESHOLD) continue;
+
+          // Carve: set to air
+          chunk.setBlock(x, y, z, BlockType.Air);
+
+          // Also carve adjacent water if this block is next to a water block
+          for (const [dx, dy, dz] of [
+            [1, 0, 0],
+            [-1, 0, 0],
+            [0, 1, 0],
+            [0, -1, 0],
+            [0, 0, 1],
+            [0, 0, -1],
+          ]) {
+            const nx = x + dx;
+            const ny = y + dy;
+            const nz = z + dz;
+            if (
+              nx >= 0 &&
+              nx < CHUNK_SIZE &&
+              ny >= 0 &&
+              ny < MAX_HEIGHT &&
+              nz >= 0 &&
+              nz < CHUNK_SIZE &&
+              chunk.getBlock(nx, ny, nz) === BlockType.Water
+            ) {
+              chunk.setBlock(nx, ny, nz, BlockType.Air);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private fillCaveWater(chunk: Chunk): void {
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+      for (let z = 0; z < CHUNK_SIZE; z++) {
+        // Find air pockets below a certain level and fill with water
+        for (let y = 1; y < CAVE_WATER_LEVEL; y++) {
+          if (chunk.getBlock(x, y, z) === BlockType.Air) {
+            // Check if there's a solid block above (ceiling)
+            const hasCeiling = this.hasSolidAbove(chunk, x, y, z);
+            if (hasCeiling) {
+              chunk.setBlock(x, y, z, BlockType.Water);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private hasSolidAbove(chunk: Chunk, x: number, y: number, z: number): boolean {
+    for (let yy = y + 1; yy < MAX_HEIGHT; yy++) {
+      const b = chunk.getBlock(x, yy, z);
+      if (b !== BlockType.Air && b !== BlockType.Water) return true;
+    }
+    return false;
   }
 
   private generateTrees(chunk: Chunk, baseX: number, baseZ: number): void {

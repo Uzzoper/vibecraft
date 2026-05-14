@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { Controls } from "./Controls";
 import { MobileControls } from "./MobileControls";
+import { BlockType } from "../Block";
 import { World } from "../world/World";
 import { AudioManager } from "../utils/AudioManager";
 
@@ -16,12 +17,17 @@ export class Player {
   public position: THREE.Vector3;
   public velocity: THREE.Vector3;
   public onGround: boolean = false;
+  public health: number = 20;
+  public maxHealth: number = 20;
   private controls: Controls;
   private mobileControls: MobileControls | null;
-  private world: World;
+  public world: World;
   private camera: THREE.Camera;
   private euler: THREE.Euler;
   private audio: AudioManager;
+  public invincibleTimer: number = 0;
+  public dead: boolean = false;
+  private respawnTimer: number = 0;
 
   constructor(
     camera: THREE.Camera,
@@ -42,6 +48,14 @@ export class Player {
   }
 
   update(deltaTime: number): void {
+    if (this.dead) {
+      this.respawnTimer -= deltaTime;
+      if (this.respawnTimer <= 0) {
+        this.respawn();
+      }
+      return;
+    }
+
     // Camera rotation from mobile controls
     if (
       this.mobileControls &&
@@ -192,7 +206,34 @@ export class Player {
 
   private isSolidBlock(bx: number, by: number, bz: number): boolean {
     const block = this.world.getBlock(bx, by, bz);
-    return block !== undefined && block > 0;
+    return block !== undefined && block > 0 && block !== BlockType.Water;
+  }
+
+  private isInWater(): boolean {
+    const bx = Math.floor(this.position.x);
+    const by = Math.floor(this.position.y);
+    const bz = Math.floor(this.position.z);
+    return this.world.getBlock(bx, by, bz) === BlockType.Water;
+  }
+
+  damage(amount: number): void {
+    if (this.invincibleTimer > 0) return;
+    if (this.dead) return;
+    this.health -= amount;
+    this.invincibleTimer = 1.0; // 1 second of invincibility
+    this.audio.play("break", 0.5);
+    if (this.health <= 0) {
+      this.health = 0;
+      this.dead = true;
+      this.respawnTimer = 2.0;
+    }
+  }
+
+  private respawn(): void {
+    this.position.set(8, 20, 8);
+    this.velocity.set(0, 0, 0);
+    this.health = this.maxHealth;
+    this.dead = false;
   }
 
   private updateCamera(): void {

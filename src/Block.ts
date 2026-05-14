@@ -5,6 +5,7 @@ export enum BlockType {
   Stone = 3,
   Wood = 4,
   Leaves = 5,
+  Water = 6,
 }
 
 export interface BlockDefinition {
@@ -39,9 +40,14 @@ export const BLOCKS: Partial<Record<BlockType, BlockDefinition>> = {
     name: "Leaves",
     texturePath: "/textures/leaves.png",
   },
+  [BlockType.Water]: {
+    id: BlockType.Water,
+    name: "Water",
+    texturePath: "/textures/water.png",
+  },
 };
 
 export const BLOCK_TYPES = Object.values(BLOCKS).filter(
-  (def): def is BlockDefinition => def !== undefined,
+  (def): def is BlockDefinition => def !== undefined && def.id !== BlockType.Water,
 );
 export const DEFAULT_BLOCK = BlockType.Grass;
