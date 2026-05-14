@@ -57,7 +57,7 @@ canvas {
   text-align: center;
   z-index: 2001;
   pointer-events: none;
-  font-family: 'Courier New', monospace;
+  font-family: 'Press Start 2P', monospace;
   letter-spacing: 4px;
   background: linear-gradient(90deg, #ff6ec7, #ffd93d, #6ec6ff, #8bff6e, #c46eff, #ff6ec7);
   background-size: 200% auto;
@@ -79,6 +79,7 @@ canvas {
   left: 50%;
   transform: translate(-50%, -50%);
   color: white;
+  font-family: 'Press Start 2P', monospace;
   font-size: 24px;
   text-align: center;
   z-index: 2000;
