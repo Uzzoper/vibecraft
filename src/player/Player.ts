@@ -26,6 +26,8 @@ export class Player {
   private euler: THREE.Euler;
   private audio: AudioManager;
   public invincibleTimer: number = 0;
+  public dead: boolean = false;
+  private respawnTimer: number = 0;
 
   constructor(
     camera: THREE.Camera,
@@ -46,6 +48,14 @@ export class Player {
   }
 
   update(deltaTime: number): void {
+    if (this.dead) {
+      this.respawnTimer -= deltaTime;
+      if (this.respawnTimer <= 0) {
+        this.respawn();
+      }
+      return;
+    }
+
     // Camera rotation from mobile controls
     if (
       this.mobileControls &&
@@ -208,11 +218,14 @@ export class Player {
 
   damage(amount: number): void {
     if (this.invincibleTimer > 0) return;
+    if (this.dead) return;
     this.health -= amount;
     this.invincibleTimer = 1.0; // 1 second of invincibility
+    this.audio.play("break", 0.5);
     if (this.health <= 0) {
       this.health = 0;
-      this.respawn();
+      this.dead = true;
+      this.respawnTimer = 2.0;
     }
   }
 
@@ -220,6 +233,7 @@ export class Player {
     this.position.set(8, 20, 8);
     this.velocity.set(0, 0, 0);
     this.health = this.maxHealth;
+    this.dead = false;
   }
 
   private updateCamera(): void {

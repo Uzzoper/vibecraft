@@ -81,6 +81,13 @@ const crosshair = document.createElement("div");
 crosshair.id = "crosshair";
 document.body.appendChild(crosshair);
 
+// Block highlight outline
+const blockOutlineMat = new THREE.LineBasicMaterial({ color: 0xffffff });
+const blockOutlineGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.001, 1.001, 1.001));
+const blockOutline = new THREE.LineSegments(blockOutlineGeo, blockOutlineMat);
+blockOutline.visible = false;
+scene.add(blockOutline);
+
 // Block selection UI
 const blockUI = document.createElement("div");
 blockUI.id = "block-ui";
@@ -399,6 +406,12 @@ function updateHUD(): void {
     : `☀️ Dia - ${minutesLeft.toFixed(0)} min até a noite`;
 }
 
+// Death screen overlay
+const deathOverlay = document.createElement("div");
+deathOverlay.id = "death-overlay";
+deathOverlay.textContent = "💀 VOCÊ MORREU";
+document.body.appendChild(deathOverlay);
+
 // Create player after audio init
 
 // Game loop
@@ -474,6 +487,22 @@ function animate(): void {
       lastPlayerChunkZ = playerChunkZ;
       world.update(player.position.x, player.position.z);
     }
+
+    // Update block highlight
+    const hitBlock = raycastBlock();
+    if (
+      hitBlock &&
+      (document.pointerLockElement === renderer.domElement || mobileControls.enabled)
+    ) {
+      blockOutline.position.set(
+        hitBlock.position.x + 0.5,
+        hitBlock.position.y + 0.5,
+        hitBlock.position.z + 0.5,
+      );
+      blockOutline.visible = true;
+    } else {
+      blockOutline.visible = false;
+    }
   }
 
   // Always update day/night cycle
@@ -487,6 +516,13 @@ function animate(): void {
   // Update HUD
   if (player) {
     updateHUD();
+  }
+
+  // Death screen
+  if (player && player.dead) {
+    deathOverlay.style.display = "flex";
+  } else if (deathOverlay.style.display !== "none") {
+    deathOverlay.style.display = "none";
   }
 
   renderer.render(scene, camera);
