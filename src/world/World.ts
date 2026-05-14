@@ -5,6 +5,7 @@ import { createAllMaterials } from "../utils/texture";
 import { Chunk } from "./Chunk";
 
 const CHUNK_SIZE = 16;
+const MAX_HEIGHT = 64;
 const RENDER_DISTANCE = 4; // chunks in each direction
 
 export class World {
@@ -50,6 +51,65 @@ export class World {
         }
       }
     }
+
+    // Generate trees on top of grass surfaces
+    this.generateTrees(chunk, baseX, baseZ);
+  }
+
+  private generateTrees(chunk: Chunk, baseX: number, baseZ: number): void {
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+      for (let z = 0; z < CHUNK_SIZE; z++) {
+        const worldX = baseX + x;
+        const worldZ = baseZ + z;
+
+        // Use noise to determine tree placement (~25% density)
+        const treeNoise = octaveNoise2D(worldX * 0.15 + 100, worldZ * 0.15 + 100, 2, 0.5);
+        if (treeNoise < 0.55) continue;
+
+        // Find the topmost non-air block in this column
+        for (let y = MAX_HEIGHT - 1; y >= 0; y--) {
+          const block = chunk.getBlock(x, y, z);
+          if (block === BlockType.Grass) {
+            this.placeTree(chunk, x, y, z);
+            break;
+          } else if (block !== BlockType.Air) {
+            break; // hit stone/dirt, no tree here
+          }
+        }
+      }
+    }
+  }
+
+  private placeTree(chunk: Chunk, x: number, y: number, z: number): void {
+    // Trunk height: 4-6 blocks
+    const trunkHeight =
+      4 + (Math.floor(octaveNoise2D(x + chunk.chunkX * 16, z + chunk.chunkZ * 16, 1) * 3) % 3);
+
+    // Place wood trunk
+    for (let ty = 1; ty <= trunkHeight; ty++) {
+      chunk.setBlock(x, y + ty, z, BlockType.Wood);
+    }
+
+    const canopyBase = y + trunkHeight;
+
+    // Place leaves - 3x3 canopy at two levels for a full look
+    for (let level = 0; level < 2; level++) {
+      const cy = canopyBase + level;
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          // Skip corners on bottom level for a more natural shape
+          if (level === 0 && Math.abs(dx) + Math.abs(dz) === 2) continue;
+          const lx = x + dx;
+          const lz = z + dz;
+          if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+            chunk.setBlock(lx, cy, lz, BlockType.Leaves);
+          }
+        }
+      }
+    }
+
+    // Top leaf
+    chunk.setBlock(x, canopyBase + 2, z, BlockType.Leaves);
   }
 
   getChunk(cx: number, cz: number): Chunk {
