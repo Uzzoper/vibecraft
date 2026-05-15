@@ -3,6 +3,7 @@ const SOUND_PATHS: Record<string, string> = {
   jump: "/sounds/jump.ogg",
   place: "/sounds/place.ogg",
   zombie: "/sounds/zombie.ogg",
+  underwater: "/sounds/underwater.ogg",
 };
 
 export class AudioManager {
@@ -11,6 +12,8 @@ export class AudioManager {
   private buffers: Map<string, AudioBuffer> = new Map();
   private stepTimer = 0;
   private stepInterval = 0.35;
+  private underwaterSource: AudioBufferSourceNode | null = null;
+  private underwaterGain: GainNode | null = null;
 
   private constructor() {
     const AC =
@@ -87,6 +90,31 @@ export class AudioManager {
     gain.connect(this.ctx.destination);
     source.start(0);
     return source;
+  }
+
+  startUnderwaterSound(volume: number = 0.3): void {
+    if (this.underwaterSource) return;
+    const buffer = this.buffers.get("underwater");
+    if (!buffer) return;
+
+    this.underwaterSource = this.ctx.createBufferSource();
+    this.underwaterSource.buffer = buffer;
+    this.underwaterSource.loop = true;
+
+    this.underwaterGain = this.ctx.createGain();
+    this.underwaterGain.gain.value = volume;
+
+    this.underwaterSource.connect(this.underwaterGain);
+    this.underwaterGain.connect(this.ctx.destination);
+    this.underwaterSource.start(0);
+  }
+
+  stopUnderwaterSound(): void {
+    if (this.underwaterSource) {
+      this.underwaterSource.stop();
+      this.underwaterSource = null;
+      this.underwaterGain = null;
+    }
   }
 
   resumeContext(): void {
