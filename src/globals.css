@@ -64,6 +64,7 @@ canvas {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   padding: 0 40px;
+  white-space: nowrap;
   filter:
     drop-shadow(0 0 12px rgba(255, 110, 199, 0.6))
     drop-shadow(0 0 24px rgba(110, 198, 255, 0.4))
@@ -109,6 +110,8 @@ canvas {
   #game-title {
     top: 8%;
     font-size: clamp(20px, 5vw, 36px);
+    padding: 0 10px;
+    letter-spacing: 2px;
   }
 
   #game-version {
