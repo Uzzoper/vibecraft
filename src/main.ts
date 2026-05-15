@@ -565,6 +565,11 @@ function updateInstructions(): void {
 updateInstructions();
 document.body.appendChild(instructions);
 
+const footer = document.createElement("div");
+footer.id = "game-footer";
+footer.textContent = "Developed by Juan Antonio Peruzzo";
+document.body.appendChild(footer);
+
 function setGameActive(active: boolean): void {
   if (active) {
     instructions.style.display = "none";
@@ -573,6 +578,7 @@ function setGameActive(active: boolean): void {
     blockUI.style.display = "flex";
     healthBarBg.style.display = "block";
     cycleIndicator.style.display = "block";
+    footer.style.display = "none";
     if (mobileControls.enabled) {
       mobileControls.show();
     }
@@ -583,6 +589,7 @@ function setGameActive(active: boolean): void {
     blockUI.style.display = "none";
     healthBarBg.style.display = "none";
     cycleIndicator.style.display = "none";
+    footer.style.display = "block";
     if (mobileControls.enabled) {
       mobileControls.hide();
     }
