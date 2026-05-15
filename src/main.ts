@@ -607,6 +607,7 @@ function setGameActive(active: boolean): void {
     healthBarBg.style.display = "block";
     cycleIndicator.style.display = "block";
     footer.style.display = "none";
+    langToggle.style.display = "none";
     if (mobileControls.enabled) {
       mobileControls.show();
     }
@@ -619,6 +620,7 @@ function setGameActive(active: boolean): void {
     healthBarBg.style.display = "none";
     cycleIndicator.style.display = "none";
     footer.style.display = "block";
+    langToggle.style.display = "block";
     if (mobileControls.enabled) {
       mobileControls.hide();
     }
