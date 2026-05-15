@@ -6,6 +6,7 @@ import { Player } from "./player/Player";
 import { BLOCK_TYPES, BlockType } from "./Block";
 import { AudioManager } from "./utils/AudioManager";
 import { Zombie } from "./mobs/Zombie";
+import { t } from "./i18n/i18n";
 import "./globals.css";
 
 const CHUNK_SIZE = 16;
@@ -375,7 +376,7 @@ healthBarBg.appendChild(healthBar);
 
 const healthText = document.createElement("div");
 healthText.id = "health-text";
-healthText.textContent = "20 / 20";
+healthText.textContent = `20 ${t("healthSeparator")} 20`;
 healthBarBg.appendChild(healthText);
 
 // Cycle time indicator
@@ -386,7 +387,7 @@ document.body.appendChild(cycleIndicator);
 function updateHUD(): void {
   const ratio = player.health / player.maxHealth;
   healthBar.style.width = `${ratio * 100}%`;
-  healthText.textContent = `${Math.max(0, Math.ceil(player.health))} / ${player.maxHealth}`;
+  healthText.textContent = `${Math.max(0, Math.ceil(player.health))} ${t("healthSeparator")} ${player.maxHealth}`;
 
   // Color based on health
   if (ratio > 0.5) {
@@ -405,14 +406,14 @@ function updateHUD(): void {
   const secondsLeft = (nextCrossing - sunAngle) / SUN_ANGLE_SPEED;
   const minutesLeft = secondsLeft / 60;
   cycleIndicator.textContent = isNight
-    ? `🌙 Noite - ${minutesLeft.toFixed(0)} min até o dia`
-    : `☀️ Dia - ${minutesLeft.toFixed(0)} min até a noite`;
+    ? `🌙 ${t("cycleNight")} - ${minutesLeft.toFixed(0)} ${t("cycleMinSuffixNight")}`
+    : `☀️ ${t("cycleDay")} - ${minutesLeft.toFixed(0)} ${t("cycleMinSuffix")}`;
 }
 
 // Death screen overlay
 const deathOverlay = document.createElement("div");
 deathOverlay.id = "death-overlay";
-deathOverlay.textContent = "💀 VOCÊ MORREU";
+deathOverlay.textContent = t("deathScreen");
 document.body.appendChild(deathOverlay);
 
 // Create player after audio init
@@ -536,16 +537,18 @@ window.addEventListener("resize", () => {
 // Prevent context menu
 renderer.domElement.addEventListener("contextmenu", e => e.preventDefault());
 
+document.title = t("pageTitle");
+
 // Title
 const title = document.createElement("div");
 title.id = "game-title";
-title.textContent = "VIBECRAFTLAND";
+title.textContent = t("gameTitle");
 document.body.appendChild(title);
 
 // Version subtitle
 const version = document.createElement("div");
 version.id = "game-version";
-version.textContent = "v0.0.1";
+version.textContent = t("version");
 document.body.appendChild(version);
 
 // Instructions
@@ -554,11 +557,9 @@ instructions.id = "instructions";
 
 function updateInstructions(): void {
   if (mobileControls.enabled) {
-    instructions.innerHTML =
-      "Click to play<br><br>Joystick: Move<br>Buttons: Jump/Break/Place<br>Rotate: Toggle Landscape";
+    instructions.innerHTML = t("instructionsMobile");
   } else {
-    instructions.innerHTML =
-      "Click to play<br><br>WASD: Move<br>Space: Jump<br>Left Click: Remove Block<br>Right Click: Place Block<br>Scroll/1-5: Select Block";
+    instructions.innerHTML = t("instructionsDesktop");
   }
 }
 
@@ -567,7 +568,7 @@ document.body.appendChild(instructions);
 
 const footer = document.createElement("div");
 footer.id = "game-footer";
-footer.textContent = "Developed by Juan Antonio Peruzzo";
+footer.textContent = t("footer");
 document.body.appendChild(footer);
 
 function setGameActive(active: boolean): void {
