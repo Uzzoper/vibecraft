@@ -574,7 +574,7 @@ document.body.appendChild(footer);
 // Language toggle button
 const langToggle = document.createElement("button");
 langToggle.id = "lang-toggle";
-langToggle.textContent = getLocale() === "en" ? "PT" : "EN";
+langToggle.textContent = getLocale() === "en" ? "🇧🇷" : "🇺🇸";
 document.body.appendChild(langToggle);
 
 langToggle.addEventListener("click", () => {
@@ -593,7 +593,7 @@ function updateAllUI(): void {
     healthText.textContent = `${Math.max(0, Math.ceil(player.health))} ${t("healthSeparator")} ${player.maxHealth}`;
   }
   updateInstructions();
-  langToggle.textContent = getLocale() === "en" ? "PT" : "EN";
+  langToggle.textContent = getLocale() === "en" ? "🇧🇷" : "🇺🇸";
   mobileControls.updateTooltips();
 }
 
