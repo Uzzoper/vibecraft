@@ -12,7 +12,7 @@ const CHUNK_SIZE = 16;
 const MOBILE_INTERACTION_COOLDOWN = 0.18;
 
 // Day/night cycle constants
-const CYCLE_DURATION = 300; // 5 minutes in seconds (150 day + 150 night)
+const CYCLE_DURATION = 240; // 4 minutes in seconds
 
 function getRendererPixelRatio(): number {
   const isTouchDevice = "ontouchstart" in globalThis || navigator.maxTouchPoints > 0;
@@ -438,13 +438,7 @@ function animate(): void {
       if (player.invincibleTimer > 0) {
         player.invincibleTimer -= delta;
       }
-      // Water breathing: take damage if fully submerged
-      const bx = Math.floor(player.position.x);
-      const by = Math.floor(player.position.y);
-      const bz = Math.floor(player.position.z);
-      if (player.world.getBlock(bx, by, bz) === BlockType.Water) {
-        player.damage(1 * delta);
-      }
+      // Water breathing handled by Player.update()
 
       // Check if player fell into void
       if (player.position.y < -10) {
@@ -548,6 +542,12 @@ title.id = "game-title";
 title.textContent = "VIBECRAFTLAND";
 document.body.appendChild(title);
 
+// Version subtitle
+const version = document.createElement("div");
+version.id = "game-version";
+version.textContent = "v0.0.1";
+document.body.appendChild(version);
+
 // Instructions
 const instructions = document.createElement("div");
 instructions.id = "instructions";
@@ -565,24 +565,33 @@ function updateInstructions(): void {
 updateInstructions();
 document.body.appendChild(instructions);
 
+const footer = document.createElement("div");
+footer.id = "game-footer";
+footer.textContent = "Developed by Juan Antonio Peruzzo";
+document.body.appendChild(footer);
+
 function setGameActive(active: boolean): void {
   if (active) {
     instructions.style.display = "none";
     title.style.display = "none";
+    version.style.display = "none";
     crosshair.style.display = "block";
     blockUI.style.display = "flex";
     healthBarBg.style.display = "block";
     cycleIndicator.style.display = "block";
+    footer.style.display = "none";
     if (mobileControls.enabled) {
       mobileControls.show();
     }
   } else {
     instructions.style.display = "block";
     title.style.display = "block";
+    version.style.display = "block";
     crosshair.style.display = "none";
     blockUI.style.display = "none";
     healthBarBg.style.display = "none";
     cycleIndicator.style.display = "none";
+    footer.style.display = "block";
     if (mobileControls.enabled) {
       mobileControls.hide();
     }
