@@ -12,7 +12,7 @@ const CHUNK_SIZE = 16;
 const MOBILE_INTERACTION_COOLDOWN = 0.18;
 
 // Day/night cycle constants
-const CYCLE_DURATION = 300; // 5 minutes in seconds (150 day + 150 night)
+const CYCLE_DURATION = 240; // 4 minutes in seconds
 
 function getRendererPixelRatio(): number {
   const isTouchDevice = "ontouchstart" in globalThis || navigator.maxTouchPoints > 0;
