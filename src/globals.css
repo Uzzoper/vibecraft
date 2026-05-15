@@ -61,6 +61,7 @@ canvas {
   background: linear-gradient(90deg, #ff6ec7, #ffd93d, #6ec6ff, #8bff6e, #c46eff, #ff6ec7);
   background-size: 200% auto;
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   filter:
     drop-shadow(0 0 12px rgba(255, 110, 199, 0.6))
