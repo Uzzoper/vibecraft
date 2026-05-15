@@ -6,7 +6,7 @@ import { Player } from "./player/Player";
 import { BLOCK_TYPES, BlockType } from "./Block";
 import { AudioManager } from "./utils/AudioManager";
 import { Zombie } from "./mobs/Zombie";
-import { t } from "./i18n/i18n";
+import { t, setLocale, getLocale } from "./i18n/i18n";
 import "./globals.css";
 
 const CHUNK_SIZE = 16;
@@ -570,6 +570,32 @@ const footer = document.createElement("div");
 footer.id = "game-footer";
 footer.textContent = t("footer");
 document.body.appendChild(footer);
+
+// Language toggle button
+const langToggle = document.createElement("button");
+langToggle.id = "lang-toggle";
+langToggle.textContent = getLocale() === "en" ? "PT" : "EN";
+document.body.appendChild(langToggle);
+
+langToggle.addEventListener("click", () => {
+  const newLocale = getLocale() === "en" ? "ptBR" : "en";
+  setLocale(newLocale);
+  updateAllUI();
+});
+
+function updateAllUI(): void {
+  document.title = t("pageTitle");
+  title.textContent = t("gameTitle");
+  version.textContent = t("version");
+  footer.textContent = t("footer");
+  deathOverlay.textContent = t("deathScreen");
+  if (player) {
+    healthText.textContent = `${Math.max(0, Math.ceil(player.health))} ${t("healthSeparator")} ${player.maxHealth}`;
+  }
+  updateInstructions();
+  langToggle.textContent = getLocale() === "en" ? "PT" : "EN";
+  mobileControls.updateTooltips();
+}
 
 function setGameActive(active: boolean): void {
   if (active) {

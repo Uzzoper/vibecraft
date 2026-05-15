@@ -412,4 +412,11 @@ export class MobileControls {
     this.cameraDeltaX = 0;
     this.cameraDeltaY = 0;
   }
+
+  updateTooltips(): void {
+    this.rotateButton.title = t("rotateTooltip");
+    this.jumpButton.title = t("jumpTooltip");
+    this.breakButton.title = t("breakTooltip");
+    this.placeButton.title = t("placeTooltip");
+  }
 }

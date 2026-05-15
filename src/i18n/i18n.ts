@@ -12,11 +12,25 @@ function detectLanguage(): TranslationLocale {
 }
 
 export function initI18n(): void {
-  currentLocale = detectLanguage();
+  const saved = localStorage.getItem("vibecraft-lang");
+  if (saved === "en" || saved === "ptBR") {
+    currentLocale = saved;
+  } else {
+    currentLocale = detectLanguage();
+  }
   const selectedDict = translations[currentLocale];
   Object.keys(selectedDict).forEach(key => {
     dict[key] = selectedDict[key];
   });
+}
+
+export function setLocale(locale: TranslationLocale): void {
+  currentLocale = locale;
+  const selectedDict = translations[currentLocale];
+  Object.keys(selectedDict).forEach(key => {
+    dict[key] = selectedDict[key];
+  });
+  localStorage.setItem("vibecraft-lang", locale);
 }
 
 export function t(key: string): string {
