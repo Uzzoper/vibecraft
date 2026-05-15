@@ -28,6 +28,8 @@ export class Player {
   public invincibleTimer: number = 0;
   public dead: boolean = false;
   private respawnTimer: number = 0;
+  private drownTimer: number = 0;
+  private readonly DROWN_INTERVAL = 5; // seconds between damage while submerged
 
   constructor(
     camera: THREE.Camera,
@@ -67,6 +69,17 @@ export class Player {
       this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.euler.x));
       this.camera.quaternion.setFromEuler(this.euler);
       this.mobileControls.update();
+    }
+
+    // Drowning: take 1 damage every 5 seconds while submerged
+    if (this.isInWater()) {
+      this.drownTimer += deltaTime;
+      if (this.drownTimer >= this.DROWN_INTERVAL) {
+        this.drownTimer = 0;
+        this.damage(1);
+      }
+    } else {
+      this.drownTimer = 0;
     }
 
     // Horizontal movement
@@ -213,7 +226,13 @@ export class Player {
     const bx = Math.floor(this.position.x);
     const by = Math.floor(this.position.y);
     const bz = Math.floor(this.position.z);
-    return this.world.getBlock(bx, by, bz) === BlockType.Water;
+    // Check from feet to head height (player is 2 blocks tall)
+    for (let dy = 0; dy <= 2; dy++) {
+      if (this.world.getBlock(bx, by + dy, bz) === BlockType.Water) {
+        return true;
+      }
+    }
+    return false;
   }
 
   damage(amount: number): void {

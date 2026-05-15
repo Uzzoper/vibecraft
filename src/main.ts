@@ -438,13 +438,7 @@ function animate(): void {
       if (player.invincibleTimer > 0) {
         player.invincibleTimer -= delta;
       }
-      // Water breathing: take damage if fully submerged
-      const bx = Math.floor(player.position.x);
-      const by = Math.floor(player.position.y);
-      const bz = Math.floor(player.position.z);
-      if (player.world.getBlock(bx, by, bz) === BlockType.Water) {
-        player.damage(1 * delta);
-      }
+      // Water breathing handled by Player.update()
 
       // Check if player fell into void
       if (player.position.y < -10) {
