@@ -1,3 +1,5 @@
+import { t } from "./i18n/i18n";
+
 export enum BlockType {
   Air = 0,
   Grass = 1,
@@ -17,32 +19,32 @@ export interface BlockDefinition {
 export const BLOCKS: Partial<Record<BlockType, BlockDefinition>> = {
   [BlockType.Grass]: {
     id: BlockType.Grass,
-    name: "Grass",
+    name: t("blockGrass"),
     texturePath: "/textures/grass.png",
   },
   [BlockType.Dirt]: {
     id: BlockType.Dirt,
-    name: "Dirt",
+    name: t("blockDirt"),
     texturePath: "/textures/dirt.png",
   },
   [BlockType.Stone]: {
     id: BlockType.Stone,
-    name: "Stone",
+    name: t("blockStone"),
     texturePath: "/textures/stone.png",
   },
   [BlockType.Wood]: {
     id: BlockType.Wood,
-    name: "Wood",
+    name: t("blockWood"),
     texturePath: "/textures/wood.png",
   },
   [BlockType.Leaves]: {
     id: BlockType.Leaves,
-    name: "Leaves",
+    name: t("blockLeaves"),
     texturePath: "/textures/leaves.png",
   },
   [BlockType.Water]: {
     id: BlockType.Water,
-    name: "Water",
+    name: t("blockWater"),
     texturePath: "/textures/water.png",
   },
 };

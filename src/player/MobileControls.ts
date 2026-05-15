@@ -1,3 +1,5 @@
+import { t } from "../i18n/i18n";
+
 export interface TouchState {
   active: boolean;
   startX: number;
@@ -71,7 +73,7 @@ export class MobileControls {
     // Orientation info overlay
     const overlay = document.createElement("div");
     overlay.id = "orientation-overlay";
-    overlay.textContent = "🔄 Gire o dispositivo para modo paisagem";
+    overlay.textContent = t("orientationOverlay");
     document.body.appendChild(overlay);
 
     // Joystick container (floating)
@@ -91,7 +93,7 @@ export class MobileControls {
     this.rotateButton = document.createElement("button");
     this.rotateButton.id = "rotate-btn";
     this.rotateButton.innerHTML = "🔄";
-    this.rotateButton.title = "Alternar paisagem";
+    this.rotateButton.title = t("rotateTooltip");
     document.body.appendChild(this.rotateButton);
 
     // Jump button
@@ -99,7 +101,7 @@ export class MobileControls {
     this.jumpButton.id = "jump-btn";
     this.jumpButton.className = "action-btn";
     this.jumpButton.textContent = "⬆";
-    this.jumpButton.title = "Pular";
+    this.jumpButton.title = t("jumpTooltip");
     this.actionContainer.appendChild(this.jumpButton);
 
     // Break block button
@@ -107,7 +109,7 @@ export class MobileControls {
     this.breakButton.id = "break-btn";
     this.breakButton.className = "action-btn";
     this.breakButton.textContent = "⛏";
-    this.breakButton.title = "Quebrar bloco";
+    this.breakButton.title = t("breakTooltip");
     this.actionContainer.appendChild(this.breakButton);
 
     // Place block button
@@ -115,7 +117,7 @@ export class MobileControls {
     this.placeButton.id = "place-btn";
     this.placeButton.className = "action-btn";
     this.placeButton.textContent = "🧱";
-    this.placeButton.title = "Colocar bloco";
+    this.placeButton.title = t("placeTooltip");
     this.actionContainer.appendChild(this.placeButton);
 
     document.body.appendChild(this.actionContainer);
@@ -268,7 +270,7 @@ export class MobileControls {
             this.isLandscape = true;
             this.repositionControls();
             this.rotateButton.innerHTML = "🔒";
-            this.rotateButton.title = "Unlock orientation";
+            this.rotateButton.title = t("rotateLockedTooltip");
           })
           .catch(() => {
             this.forcedLandscape = false;
@@ -276,7 +278,7 @@ export class MobileControls {
           });
       } else {
         if (this.isPortrait()) {
-          alert("Por favor, gire o dispositivo para modo paisagem para jogar.");
+          alert(t("portraitAlert"));
         }
         this.forcedLandscape = false;
       }
@@ -286,7 +288,7 @@ export class MobileControls {
         locked.unlock();
       }
       this.rotateButton.innerHTML = "🔄";
-      this.rotateButton.title = "Alternar paisagem";
+      this.rotateButton.title = t("rotateTooltip");
       // Re-detect
       setTimeout(() => {
         this.isLandscape = !this.isPortrait();
@@ -409,5 +411,12 @@ export class MobileControls {
     // Reset camera deltas after they're consumed
     this.cameraDeltaX = 0;
     this.cameraDeltaY = 0;
+  }
+
+  updateTooltips(): void {
+    this.rotateButton.title = t("rotateTooltip");
+    this.jumpButton.title = t("jumpTooltip");
+    this.breakButton.title = t("breakTooltip");
+    this.placeButton.title = t("placeTooltip");
   }
 }
