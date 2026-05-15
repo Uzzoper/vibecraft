@@ -542,6 +542,12 @@ title.id = "game-title";
 title.textContent = "VIBECRAFTLAND";
 document.body.appendChild(title);
 
+// Version subtitle
+const version = document.createElement("div");
+version.id = "game-version";
+version.textContent = "v0.0.1";
+document.body.appendChild(version);
+
 // Instructions
 const instructions = document.createElement("div");
 instructions.id = "instructions";
@@ -568,6 +574,7 @@ function setGameActive(active: boolean): void {
   if (active) {
     instructions.style.display = "none";
     title.style.display = "none";
+    version.style.display = "none";
     crosshair.style.display = "block";
     blockUI.style.display = "flex";
     healthBarBg.style.display = "block";
@@ -579,6 +586,7 @@ function setGameActive(active: boolean): void {
   } else {
     instructions.style.display = "block";
     title.style.display = "block";
+    version.style.display = "block";
     crosshair.style.display = "none";
     blockUI.style.display = "none";
     healthBarBg.style.display = "none";
