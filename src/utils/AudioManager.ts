@@ -73,9 +73,9 @@ export class AudioManager {
       .then(data => this.ctx.decodeAudioData(data));
   }
 
-  play(name: string, volume: number = 0.5): void {
+  play(name: string, volume: number = 0.5): AudioBufferSourceNode | null {
     const buffer = this.buffers.get(name);
-    if (!buffer) return;
+    if (!buffer) return null;
 
     const source = this.ctx.createBufferSource();
     source.buffer = buffer;
@@ -86,6 +86,7 @@ export class AudioManager {
     source.connect(gain);
     gain.connect(this.ctx.destination);
     source.start(0);
+    return source;
   }
 
   resumeContext(): void {
