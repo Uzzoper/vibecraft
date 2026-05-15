@@ -9,21 +9,6 @@ export interface TouchState {
   identifier: number;
 }
 
-interface ScreenOrientationAPI {
-  lock(
-    orientation:
-      | "portrait"
-      | "landscape"
-      | "portrait-primary"
-      | "portrait-secondary"
-      | "landscape-primary"
-      | "landscape-secondary",
-  ): Promise<void>;
-  unlock(): void;
-  type: OrientationType;
-  angle: number;
-}
-
 export class MobileControls {
   public moveX = 0;
   public moveY = 0;
@@ -33,8 +18,6 @@ export class MobileControls {
   public cameraDeltaX = 0;
   public cameraDeltaY = 0;
   public isMobile = false;
-  public rotateButton!: HTMLButtonElement;
-  public forcedLandscape = false;
 
   private joystickTouch: TouchState | null = null;
   private cameraTouch: TouchState | null = null;
@@ -43,7 +26,6 @@ export class MobileControls {
   private placeButton!: HTMLButtonElement;
   private joystickElement!: HTMLDivElement;
   private joystickKnob!: HTMLDivElement;
-  private isLandscape = false;
   private _isVisible = false;
   private actionContainer!: HTMLDivElement;
 
@@ -51,10 +33,8 @@ export class MobileControls {
     this.isMobile = this.detectTouch();
     if (!this.isMobile) return;
 
-    this.isLandscape = window.innerWidth > window.innerHeight;
     this.createUI();
     this.setupEventListeners();
-    this.onOrientationChange();
   }
 
   private detectTouch(): boolean {
@@ -70,12 +50,6 @@ export class MobileControls {
   }
 
   private createUI(): void {
-    // Orientation info overlay
-    const overlay = document.createElement("div");
-    overlay.id = "orientation-overlay";
-    overlay.textContent = t("orientationOverlay");
-    document.body.appendChild(overlay);
-
     // Joystick container (floating)
     this.joystickElement = document.createElement("div");
     this.joystickElement.id = "joystick";
@@ -88,13 +62,6 @@ export class MobileControls {
     // Action buttons container
     this.actionContainer = document.createElement("div");
     this.actionContainer.id = "action-buttons";
-
-    // Rotate button
-    this.rotateButton = document.createElement("button");
-    this.rotateButton.id = "rotate-btn";
-    this.rotateButton.innerHTML = "🔄";
-    this.rotateButton.title = t("rotateTooltip");
-    document.body.appendChild(this.rotateButton);
 
     // Jump button
     this.jumpButton = document.createElement("button");
@@ -126,59 +93,44 @@ export class MobileControls {
   }
 
   private repositionControls(): void {
-    const overlay = document.getElementById("orientation-overlay");
     const joystick = document.getElementById("joystick");
     const actions = document.getElementById("action-buttons");
-    const rotateBtn = document.getElementById("rotate-btn");
+
+    if (!joystick || !actions) return;
+
+    const display = this._isVisible ? "flex" : "none";
+    joystick.style.display = display;
+    actions.style.display = display;
+
+    if (!this._isVisible) return;
 
     if (this.isPortrait()) {
-      // Portrait: show overlay, hide game-related UI
-      if (overlay) overlay.style.opacity = "1";
-      if (joystick) joystick.style.display = "none";
-      if (actions) {
-        actions.style.display = "none";
-        actions.style.flexDirection = "row";
-      }
-      if (rotateBtn) {
-        rotateBtn.style.display = "block";
-        rotateBtn.style.top = "max(24px, env(safe-area-inset-top))";
-        rotateBtn.style.right = "max(24px, env(safe-area-inset-right))";
-        rotateBtn.style.bottom = "auto";
-        rotateBtn.style.left = "auto";
-        rotateBtn.style.transform = "none";
-      }
+      // Portrait: center-bottom layout
+      joystick.style.left = "50%";
+      joystick.style.right = "auto";
+      joystick.style.top = "auto";
+      joystick.style.bottom = "180px";
+      joystick.style.transform = "translateX(-50%)";
+
+      actions.style.left = "50%";
+      actions.style.right = "auto";
+      actions.style.top = "auto";
+      actions.style.bottom = "40px";
+      actions.style.transform = "translateX(-50%)";
+      actions.style.flexDirection = "row";
     } else {
-      // Landscape: normal layout
-      if (overlay) overlay.style.opacity = "0";
-      if (joystick) joystick.style.display = this._isVisible ? "flex" : "none";
-      if (actions) {
-        actions.style.display = this._isVisible ? "flex" : "none";
-        actions.style.top = "auto";
-        actions.style.right = "max(24px, env(safe-area-inset-right))";
-        actions.style.left = "auto";
-        actions.style.transform = "none";
-        actions.style.flexDirection = "row";
-      }
-      if (rotateBtn) {
-        rotateBtn.style.display = "block";
-        rotateBtn.style.top = "max(24px, env(safe-area-inset-top))";
-        rotateBtn.style.right = "max(24px, env(safe-area-inset-right))";
-        rotateBtn.style.bottom = "auto";
-        rotateBtn.style.left = "auto";
-        rotateBtn.style.transform = "none";
-      }
+      // Landscape: bottom-left joystick, bottom-right actions
+      joystick.style.left = "30px";
+      joystick.style.top = "auto";
+      joystick.style.bottom = "150px";
+      joystick.style.transform = "none";
 
-      // Position joystick bottom-left
-      if (joystick) {
-        joystick.style.left = "30px";
-        joystick.style.top = "auto";
-        joystick.style.bottom = "150px";
-      }
-
-      // Position action buttons bottom-right
-      if (actions) {
-        actions.style.bottom = "40px";
-      }
+      actions.style.right = "max(24px, env(safe-area-inset-right))";
+      actions.style.left = "auto";
+      actions.style.top = "auto";
+      actions.style.bottom = "40px";
+      actions.style.transform = "none";
+      actions.style.flexDirection = "row";
     }
   }
 
@@ -231,82 +183,13 @@ export class MobileControls {
       this.placeBlock = false;
     });
 
-    // Rotate button
-    this.rotateButton.addEventListener("touchstart", e => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.toggleOrientation();
-    });
-
-    // Orientation change detection
+    // Reposition on orientation change
     window.addEventListener("resize", () => {
-      const nowLandscape = !this.isPortrait();
-      if (nowLandscape !== this.isLandscape) {
-        this.isLandscape = nowLandscape;
-        this.repositionControls();
-      }
-    });
-  }
-
-  private getOrientation(): ScreenOrientationAPI | null {
-    try {
-      return (screen.orientation as unknown as ScreenOrientationAPI) ?? null;
-    } catch {
-      return null;
-    }
-  }
-
-  private toggleOrientation(): void {
-    const orientation = this.getOrientation();
-
-    this.forcedLandscape = !this.forcedLandscape;
-
-    if (this.forcedLandscape) {
-      const locked = orientation;
-      if (locked && typeof locked.lock === "function") {
-        locked
-          .lock("landscape")
-          .then(() => {
-            this.isLandscape = true;
-            this.repositionControls();
-            this.rotateButton.innerHTML = "🔒";
-            this.rotateButton.title = t("rotateLockedTooltip");
-          })
-          .catch(() => {
-            this.forcedLandscape = false;
-            this.rotateButton.innerHTML = "🔄";
-          });
-      } else {
-        if (this.isPortrait()) {
-          alert(t("portraitAlert"));
-        }
-        this.forcedLandscape = false;
-      }
-    } else {
-      const locked = orientation;
-      if (locked && typeof locked.unlock === "function") {
-        locked.unlock();
-      }
-      this.rotateButton.innerHTML = "🔄";
-      this.rotateButton.title = t("rotateTooltip");
-      // Re-detect
-      setTimeout(() => {
-        this.isLandscape = !this.isPortrait();
-        this.repositionControls();
-      }, 300);
-    }
-  }
-
-  private onOrientationChange(): void {
-    // Auto-detect after a short delay
-    setTimeout(() => {
-      this.isLandscape = !this.isPortrait();
       this.repositionControls();
-    }, 500);
+    });
   }
 
   private onTouchStart(e: TouchEvent): void {
-    if (this.isPortrait()) return; // ignore touches in portrait mode (only rotate button works)
     e.preventDefault();
 
     for (const touch of Array.from(e.changedTouches)) {
@@ -340,7 +223,6 @@ export class MobileControls {
   }
 
   private onTouchMove(e: TouchEvent): void {
-    if (this.isPortrait()) return;
     e.preventDefault();
 
     for (const touch of Array.from(e.changedTouches)) {
@@ -414,7 +296,6 @@ export class MobileControls {
   }
 
   updateTooltips(): void {
-    this.rotateButton.title = t("rotateTooltip");
     this.jumpButton.title = t("jumpTooltip");
     this.breakButton.title = t("breakTooltip");
     this.placeButton.title = t("placeTooltip");

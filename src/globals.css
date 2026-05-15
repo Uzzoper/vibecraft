@@ -126,25 +126,6 @@ canvas {
    Source: src/player/MobileControls.ts — Mobile UI styles
    ========================================================================== */
 
-/* Orientation lock overlay */
-#orientation-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 24px;
-  z-index: 9999;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
 /* Joystick container */
 #joystick {
   position: fixed;
@@ -176,22 +157,6 @@ canvas {
   display: none;
   gap: 12px;
   touch-action: none;
-}
-
-/* Rotate orientation button */
-#rotate-btn {
-  position: fixed;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: rgba(100, 100, 255, 0.4);
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  color: white;
-  font-size: 24px;
-  z-index: 1001;
-  touch-action: none;
-  user-select: none;
-  cursor: pointer;
 }
 
 /* Shared styles for jump / break / place buttons */
