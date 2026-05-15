@@ -102,6 +102,17 @@ function updateBlockUI(): void {
     div.style.border = index === selectedBlockIndex ? "3px solid white" : "2px solid gray";
     div.style.backgroundColor = getBlockColor(block.id);
     div.style.opacity = index === selectedBlockIndex ? "1" : "0.6";
+    div.addEventListener("click", e => {
+      e.stopPropagation();
+      selectedBlockIndex = index;
+      updateBlockUI();
+    });
+    div.addEventListener("touchend", e => {
+      e.preventDefault();
+      e.stopPropagation();
+      selectedBlockIndex = index;
+      updateBlockUI();
+    });
     blockUI.appendChild(div);
   });
 }
