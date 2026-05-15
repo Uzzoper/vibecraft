@@ -24,6 +24,7 @@ export class Zombie {
   private attackAnimTimer: number = 0;
   private readonly ATTACK_ANIM_DURATION = 0.4;
   private growlTimer: number = 0;
+  private currentSoundSource: AudioBufferSourceNode | null = null;
 
   constructor(world: World, target: Player, x: number, z: number) {
     this.world = world;
@@ -168,12 +169,18 @@ export class Zombie {
       );
     }
 
-    // Proximity sound
+    // Proximity sound — louder when closer
     if (dist < 15) {
       this.growlTimer += deltaTime;
       if (this.growlTimer > 3) {
         this.growlTimer = 0;
-        AudioManager.get().play("zombie", 0.4);
+        // Stop previous sound if still playing
+        if (this.currentSoundSource) {
+          this.currentSoundSource.stop();
+          this.currentSoundSource = null;
+        }
+        const volume = THREE.MathUtils.mapLinear(dist, 0, 15, 0.5, 0.1);
+        this.currentSoundSource = AudioManager.get().play("zombie", volume);
       }
     } else {
       this.growlTimer = 0;
@@ -203,5 +210,9 @@ export class Zombie {
 
   despawn(): void {
     this.alive = false;
+    if (this.currentSoundSource) {
+      this.currentSoundSource.stop();
+      this.currentSoundSource = null;
+    }
   }
 }
