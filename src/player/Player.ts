@@ -82,6 +82,13 @@ export class Player {
       this.drownTimer = 0;
     }
 
+    // Underwater ambient sound
+    if (this.isInWater()) {
+      this.audio.startUnderwaterSound(0.3);
+    } else {
+      this.audio.stopUnderwaterSound();
+    }
+
     // Horizontal movement
     const forward = new THREE.Vector3();
     this.camera.getWorldDirection(forward);
