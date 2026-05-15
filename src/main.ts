@@ -453,6 +453,28 @@ function animate(): void {
       mobilePlaceCooldown = Math.max(0, mobilePlaceCooldown - delta);
 
       if (mobileControls.breakBlock && mobileBreakCooldown === 0) {
+        // First check zombie hit
+        raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+        const zombieMeshList: THREE.Object3D[] = [];
+        for (const zombie of zombies) {
+          zombie.mesh.traverse(child => {
+            if ((child as THREE.Mesh).isMesh) {
+              zombieMeshList.push(child);
+            }
+          });
+        }
+        const zombieIntersects = raycaster.intersectObjects(zombieMeshList);
+        if (zombieIntersects.length > 0) {
+          const zombie = findZombieByMesh(zombieIntersects[0].object);
+          if (zombie && zombie.alive) {
+            zombie.takeDamage(5);
+            audioManager.play("break", 0.5);
+            mobileBreakCooldown = MOBILE_INTERACTION_COOLDOWN;
+            return;
+          }
+        }
+
+        // Fall back to block breaking
         const hit = raycastBlock();
         if (hit) {
           world.setBlock(hit.position.x, hit.position.y, hit.position.z, 0 as BlockType);
