@@ -112,12 +112,12 @@ export class MobileControls {
       joystick.style.bottom = "180px";
       joystick.style.transform = "translateX(-50%)";
 
-      actions.style.left = "50%";
-      actions.style.right = "auto";
+      actions.style.left = "auto";
+      actions.style.right = "max(24px, env(safe-area-inset-right))";
       actions.style.top = "auto";
       actions.style.bottom = "40px";
-      actions.style.transform = "translateX(-50%)";
-      actions.style.flexDirection = "row";
+      actions.style.transform = "none";
+      actions.style.flexDirection = "column";
     } else {
       // Landscape: bottom-left joystick, bottom-right actions
       joystick.style.left = "30px";

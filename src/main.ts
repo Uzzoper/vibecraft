@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { inject } from "@vercel/analytics";
 import { World } from "./world/World";
 import { Controls } from "./player/Controls";
 import { MobileControls } from "./player/MobileControls";
@@ -8,6 +9,8 @@ import { AudioManager } from "./utils/AudioManager";
 import { Zombie } from "./mobs/Zombie";
 import { t, setLocale, getLocale } from "./i18n/i18n";
 import "./globals.css";
+
+inject();
 
 const CHUNK_SIZE = 16;
 const MOBILE_INTERACTION_COOLDOWN = 0.18;
