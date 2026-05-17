@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { inject } from "@vercel/analytics";
 import { createEngine } from "./engine/createEngine";
 import { createDayNightState } from "./rendering/dayNight";
+import { createGameUi } from "./ui/gameUi";
 import { World } from "./world/World";
 import { Controls } from "./player/Controls";
 import { MobileControls } from "./player/MobileControls";
@@ -9,7 +10,6 @@ import { Player } from "./player/Player";
 import { BLOCK_TYPES } from "./Block";
 import { AudioManager } from "./utils/AudioManager";
 import { Zombie } from "./mobs/Zombie";
-import { t, setLocale, getLocale } from "./i18n/i18n";
 import { BlockType } from "./world/BlockType";
 import "./globals.css";
 
@@ -21,6 +21,7 @@ const MOBILE_INTERACTION_COOLDOWN = 0.18;
 // Day/night cycle constants
 const { scene, camera, renderer, clock, skyColors, lights } = createEngine();
 const dayNight = createDayNightState(scene, renderer, skyColors, lights);
+const ui = createGameUi(dayNight);
 
 // World
 const world = new World(scene);
@@ -279,53 +280,9 @@ function updateZombies(deltaTime: number): void {
   }
 }
 
-// Health HUD
-const healthBarBg = document.createElement("div");
-healthBarBg.id = "health-bar-bg";
-document.body.appendChild(healthBarBg);
-
-const healthBar = document.createElement("div");
-healthBar.id = "health-bar";
-healthBarBg.appendChild(healthBar);
-
-const healthText = document.createElement("div");
-healthText.id = "health-text";
-healthText.textContent = `20 ${t("healthSeparator")} 20`;
-healthBarBg.appendChild(healthText);
-
-// Cycle time indicator
-const cycleIndicator = document.createElement("div");
-cycleIndicator.id = "cycle-indicator";
-document.body.appendChild(cycleIndicator);
-
 function updateHUD(): void {
-  const ratio = player.health / player.maxHealth;
-  healthBar.style.width = `${ratio * 100}%`;
-  healthText.textContent = `${Math.max(0, Math.ceil(player.health))} ${t("healthSeparator")} ${player.maxHealth}`;
-
-  // Color based on health
-  if (ratio > 0.5) {
-    healthBar.style.backgroundColor = "#4caf50";
-  } else if (ratio > 0.25) {
-    healthBar.style.backgroundColor = "#ff9800";
-  } else {
-    healthBar.style.backgroundColor = "#f44336";
-  }
-
-  // Cycle indicator
-  const minutesLeft = dayNight.getMinutesLeft();
-  cycleIndicator.textContent = dayNight.isNight()
-    ? `🌙 ${t("cycleNight")} - ${minutesLeft.toFixed(0)} ${t("cycleMinSuffixNight")}`
-    : `☀️ ${t("cycleDay")} - ${minutesLeft.toFixed(0)} ${t("cycleMinSuffix")}`;
+  ui.updateHud(player.health, player.maxHealth);
 }
-
-// Death screen overlay
-const deathOverlay = document.createElement("div");
-deathOverlay.id = "death-overlay";
-deathOverlay.textContent = t("deathScreen");
-document.body.appendChild(deathOverlay);
-
-// Create player after audio init
 
 // Game loop
 let mobileBreakCooldown = 0;
@@ -448,9 +405,9 @@ function animate(): void {
 
   // Death screen
   if (player && player.dead) {
-    deathOverlay.style.display = "flex";
-  } else if (deathOverlay.style.display !== "none") {
-    deathOverlay.style.display = "none";
+    ui.deathOverlay.style.display = "flex";
+  } else if (ui.deathOverlay.style.display !== "none") {
+    ui.deathOverlay.style.display = "none";
   }
 
   renderer.render(scene, camera);
@@ -459,90 +416,17 @@ function animate(): void {
 // Prevent context menu
 renderer.domElement.addEventListener("contextmenu", e => e.preventDefault());
 
-document.title = t("pageTitle");
-
-// Title
-const title = document.createElement("div");
-title.id = "game-title";
-title.textContent = t("gameTitle");
-document.body.appendChild(title);
-
-// Version subtitle
-const version = document.createElement("div");
-version.id = "game-version";
-version.textContent = t("version");
-document.body.appendChild(version);
-
-// Instructions
-const instructions = document.createElement("div");
-instructions.id = "instructions";
-
-function updateInstructions(): void {
-  if (mobileControls.enabled) {
-    instructions.innerHTML = t("instructionsMobile");
-  } else {
-    instructions.innerHTML = t("instructionsDesktop");
-  }
-}
-
-updateInstructions();
-document.body.appendChild(instructions);
-
-const footer = document.createElement("div");
-footer.id = "game-footer";
-footer.textContent = t("footer");
-document.body.appendChild(footer);
-
-// Language toggle button
-const langToggle = document.createElement("button");
-langToggle.id = "lang-toggle";
-langToggle.textContent = getLocale() === "en" ? "🇧🇷" : "🇺🇸";
-document.body.appendChild(langToggle);
-
-langToggle.addEventListener("click", () => {
-  const newLocale = getLocale() === "en" ? "ptBR" : "en";
-  setLocale(newLocale);
-  updateAllUI();
-});
-
-function updateAllUI(): void {
-  document.title = t("pageTitle");
-  title.textContent = t("gameTitle");
-  version.textContent = t("version");
-  footer.textContent = t("footer");
-  deathOverlay.textContent = t("deathScreen");
-  if (player) {
-    healthText.textContent = `${Math.max(0, Math.ceil(player.health))} ${t("healthSeparator")} ${player.maxHealth}`;
-  }
-  updateInstructions();
-  langToggle.textContent = getLocale() === "en" ? "🇧🇷" : "🇺🇸";
-  mobileControls.updateTooltips();
-}
-
 function setGameActive(active: boolean): void {
+  ui.setGameActive(active);
   if (active) {
-    instructions.style.display = "none";
-    title.style.display = "none";
-    version.style.display = "none";
     crosshair.style.display = "block";
     blockUI.style.display = "flex";
-    healthBarBg.style.display = "block";
-    cycleIndicator.style.display = "block";
-    footer.style.display = "none";
-    langToggle.style.display = "none";
     if (mobileControls.enabled) {
       mobileControls.show();
     }
   } else {
-    instructions.style.display = "block";
-    title.style.display = "block";
-    version.style.display = "block";
     crosshair.style.display = "none";
     blockUI.style.display = "none";
-    healthBarBg.style.display = "none";
-    cycleIndicator.style.display = "none";
-    footer.style.display = "block";
-    langToggle.style.display = "block";
     if (mobileControls.enabled) {
       mobileControls.hide();
     }
@@ -551,14 +435,16 @@ function setGameActive(active: boolean): void {
 
 // Initial state
 setGameActive(false);
-healthBarBg.style.display = "none";
-cycleIndicator.style.display = "none";
+ui.healthBarBg.style.display = "none";
+ui.cycleIndicator.style.display = "none";
 
 // Load sounds and init player
 await audioManager.loadAll();
 player = new Player(camera, controls, world, mobileControls, audioManager);
 lastPlayerChunkX = Math.floor(player.position.x / CHUNK_SIZE);
 lastPlayerChunkZ = Math.floor(player.position.z / CHUNK_SIZE);
+ui.updateAllText(player.health, player.maxHealth);
+ui.updateInstructions(mobileControls.enabled);
 
 // Handle clicks
 renderer.domElement.addEventListener("click", () => {

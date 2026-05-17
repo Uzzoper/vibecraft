@@ -1,4 +1,4 @@
-import { t } from "../i18n/i18n";
+import { t, subscribeLocaleChange } from "../i18n/i18n";
 
 export interface TouchState {
   active: boolean;
@@ -28,6 +28,7 @@ export class MobileControls {
   private joystickKnob!: HTMLDivElement;
   private _isVisible = false;
   private actionContainer!: HTMLDivElement;
+  private unsubscribeLocaleChange: (() => void) | null = null;
 
   constructor() {
     this.isMobile = this.detectTouch();
@@ -35,6 +36,7 @@ export class MobileControls {
 
     this.createUI();
     this.setupEventListeners();
+    this.unsubscribeLocaleChange = subscribeLocaleChange(() => this.updateTooltips());
   }
 
   private detectTouch(): boolean {
@@ -299,5 +301,10 @@ export class MobileControls {
     this.jumpButton.title = t("jumpTooltip");
     this.breakButton.title = t("breakTooltip");
     this.placeButton.title = t("placeTooltip");
+  }
+
+  destroy(): void {
+    this.unsubscribeLocaleChange?.();
+    this.unsubscribeLocaleChange = null;
   }
 }
