@@ -2,6 +2,7 @@ import { translations, TranslationLocale } from "./translations";
 
 let currentLocale: TranslationLocale = "en";
 const dict: Record<string, string> = {};
+const listeners = new Set<() => void>();
 
 function detectLanguage(): TranslationLocale {
   const lang = navigator.language;
@@ -31,6 +32,9 @@ export function setLocale(locale: TranslationLocale): void {
     dict[key] = selectedDict[key];
   });
   localStorage.setItem("vibecraft-lang", locale);
+  for (const listener of listeners) {
+    listener();
+  }
 }
 
 export function t(key: string): string {
@@ -39,6 +43,13 @@ export function t(key: string): string {
 
 export function getLocale(): TranslationLocale {
   return currentLocale;
+}
+
+export function subscribeLocaleChange(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 initI18n();
