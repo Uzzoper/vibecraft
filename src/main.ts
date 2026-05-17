@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { inject } from "@vercel/analytics";
+import { createEngine } from "./engine/createEngine";
 import { World } from "./world/World";
 import { Controls } from "./player/Controls";
 import { MobileControls } from "./player/MobileControls";
@@ -19,45 +20,8 @@ const MOBILE_INTERACTION_COOLDOWN = 0.18;
 // Day/night cycle constants
 const CYCLE_DURATION = 240; // 4 minutes in seconds
 
-function getRendererPixelRatio(): number {
-  const isTouchDevice = "ontouchstart" in globalThis || navigator.maxTouchPoints > 0;
-  const maxPixelRatio = isTouchDevice ? 1.5 : 2;
-  return Math.min(window.devicePixelRatio, maxPixelRatio);
-}
-
-// Scene setup
-const scene = new THREE.Scene();
-const skyColors = {
-  day: new THREE.Color(0x87ceeb),
-  night: new THREE.Color(0x0a0a2e),
-};
-scene.background = skyColors.day;
-scene.fog = new THREE.Fog(skyColors.day, 20, 80);
-
-// Camera
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-
-// Renderer
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(getRendererPixelRatio());
-document.body.appendChild(renderer.domElement);
-
-// Lights
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-scene.add(ambientLight);
-
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-directionalLight.position.set(50, 100, 50);
-scene.add(directionalLight);
-
-const moonLight = new THREE.DirectionalLight(0x4466aa, 0.15);
-moonLight.position.set(-50, 80, -50);
-scene.add(moonLight);
-
-// Hemisphere light for softer ambient
-const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x333333, 0.3);
-scene.add(hemisphereLight);
+const { scene, camera, renderer, clock, skyColors, lights } = createEngine();
+const { ambientLight, directionalLight, moonLight, hemisphereLight } = lights;
 
 // World
 const world = new World(scene);
@@ -434,7 +398,6 @@ document.body.appendChild(deathOverlay);
 // Create player after audio init
 
 // Game loop
-const clock = new THREE.Clock();
 let mobileBreakCooldown = 0;
 let mobilePlaceCooldown = 0;
 let lastPlayerChunkX = 0;
@@ -562,14 +525,6 @@ function animate(): void {
 
   renderer.render(scene, camera);
 }
-
-// Handle window resize
-window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setPixelRatio(getRendererPixelRatio());
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
 
 // Prevent context menu
 renderer.domElement.addEventListener("contextmenu", e => e.preventDefault());
