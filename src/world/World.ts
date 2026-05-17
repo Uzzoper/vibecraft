@@ -1,14 +1,19 @@
 import * as THREE from "three";
-import { BlockType } from "../Block";
-import { octaveNoise2D, octaveNoise3D } from "../utils/noise";
 import { createAllMaterials } from "../utils/texture";
-import { Chunk } from "./Chunk";
+import { BlockType } from "./BlockType";
+import { Chunk, WorkerMeshData } from "./Chunk";
+import { generateTerrain } from "./terrain";
 
 const CHUNK_SIZE = 16;
-const MAX_HEIGHT = 64;
 const RENDER_DISTANCE = 4; // chunks in each direction
-const CAVE_THRESHOLD = 0.35; // noise value below this = air (cave)
-const CAVE_WATER_LEVEL = 10; // water fills caves below this y level
+
+interface WorkerMessage {
+  type: "GENERATE_AND_MESH_RESULT" | "MESH_ONLY_RESULT";
+  cx: number;
+  cz: number;
+  blocks?: Uint8Array;
+  meshData: WorkerMeshData;
+}
 
 export class World {
   private chunks = new Map<string, Chunk>();
@@ -17,196 +22,110 @@ export class World {
   private chunkMeshes = new Map<string, THREE.Group>();
   private lastCenterCX: number | null = null;
   private lastCenterCZ: number | null = null;
+  private worker: Worker;
+  private pendingMeshes = new Set<string>();
+  private chunksToRemesh = new Set<string>();
+  private modifiedChunkBlocks = new Map<string, Uint8Array>();
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
     this.materials = createAllMaterials();
+
+    // Initialize Web Worker
+    this.worker = new Worker(new URL("world.worker.ts", import.meta.url), {
+      type: "module",
+    });
+
+    this.worker.addEventListener("message", e => {
+      const { type, cx, cz, blocks, meshData } = e.data as WorkerMessage;
+      const key = this.chunkKey(cx, cz);
+
+      if (type === "GENERATE_AND_MESH_RESULT") {
+        let chunk = this.chunks.get(key);
+        if (!chunk) {
+          const savedBlocks = this.modifiedChunkBlocks.get(key);
+          chunk = new Chunk(
+            cx,
+            cz,
+            savedBlocks ? savedBlocks.slice() : (blocks ?? generateTerrain(cx, cz)),
+          );
+          this.chunks.set(key, chunk);
+        }
+        this.pendingMeshes.delete(key);
+        if (this.chunksToRemesh.delete(key)) {
+          this.requestChunkMesh(cx, cz);
+          return;
+        }
+        this.applyChunkMesh(key, chunk, meshData);
+      } else if (type === "MESH_ONLY_RESULT") {
+        const chunk = this.chunks.get(key);
+        this.pendingMeshes.delete(key);
+        if (!chunk) {
+          this.chunksToRemesh.delete(key);
+          return;
+        }
+        if (this.chunksToRemesh.delete(key)) {
+          this.requestChunkMesh(cx, cz);
+          return;
+        }
+        this.applyChunkMesh(key, chunk, meshData);
+      }
+    });
   }
 
   private chunkKey(cx: number, cz: number): string {
     return `${cx},${cz}`;
   }
 
-  private generateChunkTerrain(chunk: Chunk): void {
-    const baseX = chunk.chunkX * CHUNK_SIZE;
-    const baseZ = chunk.chunkZ * CHUNK_SIZE;
-
-    for (let x = 0; x < CHUNK_SIZE; x++) {
-      for (let z = 0; z < CHUNK_SIZE; z++) {
-        const worldX = baseX + x;
-        const worldZ = baseZ + z;
-
-        // Use noise to determine terrain height (range roughly 2-12)
-        const n = octaveNoise2D(worldX * 0.1, worldZ * 0.1, 4, 0.5);
-        const height = Math.floor(THREE.MathUtils.mapLinear(n, -1, 1, 2, 14));
-
-        for (let y = 0; y < height; y++) {
-          let type: BlockType;
-          if (y === height - 1) {
-            type = BlockType.Grass;
-          } else if (y > height - 4) {
-            type = BlockType.Dirt;
-          } else {
-            type = BlockType.Stone;
-          }
-          chunk.setBlock(x, y, z, type);
-        }
-      }
-    }
-
-    // Carve caves using 3D noise
-    this.carveCaves(chunk, baseX, baseZ);
-
-    // Fill low caves with water
-    this.fillCaveWater(chunk);
-
-    // Generate trees on top of grass surfaces
-    this.generateTrees(chunk, baseX, baseZ);
-  }
-
-  private carveCaves(chunk: Chunk, baseX: number, baseZ: number): void {
-    for (let x = 0; x < CHUNK_SIZE; x++) {
-      for (let z = 0; z < CHUNK_SIZE; z++) {
-        for (let y = 1; y < MAX_HEIGHT - 1; y++) {
-          const worldX = baseX + x;
-          const worldY = y;
-          const worldZ = baseZ + z;
-
-          // Only carve into stone and dirt (not grass surface or water)
-          const currentBlock = chunk.getBlock(x, y, z);
-          if (currentBlock !== BlockType.Stone && currentBlock !== BlockType.Dirt) continue;
-
-          // Skip very high terrain (keep surfaces intact)
-          const surfaceNoise = octaveNoise2D(worldX * 0.1, worldZ * 0.1, 4, 0.5);
-          const surfaceHeight = Math.floor(THREE.MathUtils.mapLinear(surfaceNoise, -1, 1, 2, 14));
-          if (y >= surfaceHeight - 2) continue;
-
-          // 3D noise for cave carving
-          const caveNoise = octaveNoise3D(worldX * 0.08, worldY * 0.08, worldZ * 0.08, 3, 0.5);
-          if (caveNoise > CAVE_THRESHOLD) continue;
-
-          // Carve: set to air
-          chunk.setBlock(x, y, z, BlockType.Air);
-
-          // Also carve adjacent water if this block is next to a water block
-          for (const [dx, dy, dz] of [
-            [1, 0, 0],
-            [-1, 0, 0],
-            [0, 1, 0],
-            [0, -1, 0],
-            [0, 0, 1],
-            [0, 0, -1],
-          ]) {
-            const nx = x + dx;
-            const ny = y + dy;
-            const nz = z + dz;
-            if (
-              nx >= 0 &&
-              nx < CHUNK_SIZE &&
-              ny >= 0 &&
-              ny < MAX_HEIGHT &&
-              nz >= 0 &&
-              nz < CHUNK_SIZE &&
-              chunk.getBlock(nx, ny, nz) === BlockType.Water
-            ) {
-              chunk.setBlock(nx, ny, nz, BlockType.Air);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private fillCaveWater(chunk: Chunk): void {
-    for (let x = 0; x < CHUNK_SIZE; x++) {
-      for (let z = 0; z < CHUNK_SIZE; z++) {
-        // Find air pockets below a certain level and fill with water
-        for (let y = 1; y < CAVE_WATER_LEVEL; y++) {
-          if (chunk.getBlock(x, y, z) === BlockType.Air) {
-            // Check if there's a solid block above (ceiling)
-            const hasCeiling = this.hasSolidAbove(chunk, x, y, z);
-            if (hasCeiling) {
-              chunk.setBlock(x, y, z, BlockType.Water);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private hasSolidAbove(chunk: Chunk, x: number, y: number, z: number): boolean {
-    for (let yy = y + 1; yy < MAX_HEIGHT; yy++) {
-      const b = chunk.getBlock(x, yy, z);
-      if (b !== BlockType.Air && b !== BlockType.Water) return true;
-    }
-    return false;
-  }
-
-  private generateTrees(chunk: Chunk, baseX: number, baseZ: number): void {
-    for (let x = 0; x < CHUNK_SIZE; x++) {
-      for (let z = 0; z < CHUNK_SIZE; z++) {
-        const worldX = baseX + x;
-        const worldZ = baseZ + z;
-
-        // Use noise to determine tree placement (~25% density)
-        const treeNoise = octaveNoise2D(worldX * 0.15 + 100, worldZ * 0.15 + 100, 2, 0.5);
-        if (treeNoise < 0.55) continue;
-
-        // Find the topmost non-air block in this column
-        for (let y = MAX_HEIGHT - 1; y >= 0; y--) {
-          const block = chunk.getBlock(x, y, z);
-          if (block === BlockType.Grass) {
-            this.placeTree(chunk, x, y, z);
-            break;
-          } else if (block !== BlockType.Air) {
-            break; // hit stone/dirt, no tree here
-          }
-        }
-      }
-    }
-  }
-
-  private placeTree(chunk: Chunk, x: number, y: number, z: number): void {
-    // Trunk height: 4-6 blocks
-    const trunkHeight =
-      4 + (Math.floor(octaveNoise2D(x + chunk.chunkX * 16, z + chunk.chunkZ * 16, 1) * 3) % 3);
-
-    // Place wood trunk
-    for (let ty = 1; ty <= trunkHeight; ty++) {
-      chunk.setBlock(x, y + ty, z, BlockType.Wood);
-    }
-
-    const canopyBase = y + trunkHeight;
-
-    // Place leaves - 3x3 canopy at two levels for a full look
-    for (let level = 0; level < 2; level++) {
-      const cy = canopyBase + level;
-      for (let dx = -1; dx <= 1; dx++) {
-        for (let dz = -1; dz <= 1; dz++) {
-          // Skip corners on bottom level for a more natural shape
-          if (level === 0 && Math.abs(dx) + Math.abs(dz) === 2) continue;
-          const lx = x + dx;
-          const lz = z + dz;
-          if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
-            chunk.setBlock(lx, cy, lz, BlockType.Leaves);
-          }
-        }
-      }
-    }
-
-    // Top leaf
-    chunk.setBlock(x, canopyBase + 2, z, BlockType.Leaves);
-  }
-
-  getChunk(cx: number, cz: number): Chunk {
+  private loadChunk(cx: number, cz: number): void {
     const key = this.chunkKey(cx, cz);
-    if (this.chunks.has(key)) {
-      return this.chunks.get(key)!;
-    }
-    const chunk = new Chunk(cx, cz);
-    this.generateChunkTerrain(chunk);
+    if (this.chunks.has(key)) return;
+
+    const savedBlocks = this.modifiedChunkBlocks.get(key);
+    const blocks = savedBlocks ? savedBlocks.slice() : generateTerrain(cx, cz);
+    const chunk = new Chunk(cx, cz, blocks);
     this.chunks.set(key, chunk);
-    return chunk;
+    this.requestChunkMesh(cx, cz);
+  }
+
+  private requestChunkMesh(cx: number, cz: number): void {
+    const key = this.chunkKey(cx, cz);
+    const chunk = this.chunks.get(key);
+    if (!chunk) return;
+
+    if (this.pendingMeshes.has(key)) {
+      this.chunksToRemesh.add(key);
+      return;
+    }
+
+    this.pendingMeshes.add(key);
+    this.worker.postMessage({
+      type: "MESH_ONLY",
+      cx,
+      cz,
+      blocks: chunk.blocks.slice(),
+    });
+  }
+
+  private applyChunkMesh(key: string, chunk: Chunk, meshData: WorkerMeshData): void {
+    const mesh = chunk.applyMeshData(meshData, this.materials);
+    if (!this.chunkMeshes.has(key)) {
+      this.scene.add(mesh);
+    }
+    this.chunkMeshes.set(key, mesh);
+  }
+
+  private disposeChunkMesh(key: string): void {
+    const mesh = this.chunkMeshes.get(key);
+    if (!mesh) return;
+
+    this.scene.remove(mesh);
+    mesh.traverse(child => {
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+      }
+    });
+    this.chunkMeshes.delete(key);
   }
 
   getBlock(worldX: number, worldY: number, worldZ: number): BlockType {
@@ -224,33 +143,21 @@ export class World {
   setBlock(worldX: number, worldY: number, worldZ: number, type: BlockType): void {
     const cx = Math.floor(worldX / CHUNK_SIZE);
     const cz = Math.floor(worldZ / CHUNK_SIZE);
-    let chunk = this.chunks.get(this.chunkKey(cx, cz));
-    if (!chunk) {
-      chunk = this.getChunk(cx, cz);
-    }
+    const key = this.chunkKey(cx, cz);
+    const chunk = this.chunks.get(key);
+    if (!chunk) return;
 
     const lx = ((worldX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
     const ly = worldY;
     const lz = ((worldZ % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+
+    const oldType = chunk.getBlock(lx, ly, lz);
+    if (oldType === type) return;
+
     chunk.setBlock(lx, ly, lz, type);
+    this.modifiedChunkBlocks.set(key, chunk.blocks.slice());
 
-    if (chunk.isDirty()) {
-      this.rebuildChunkMesh(cx, cz);
-    }
-  }
-
-  private rebuildChunkMesh(cx: number, cz: number): void {
-    const chunk = this.chunks.get(this.chunkKey(cx, cz));
-    if (!chunk) return;
-
-    const oldMesh = this.chunkMeshes.get(this.chunkKey(cx, cz));
-    if (oldMesh) {
-      this.scene.remove(oldMesh);
-    }
-
-    const mesh = chunk.buildMesh(this.materials);
-    this.scene.add(mesh);
-    this.chunkMeshes.set(this.chunkKey(cx, cz), mesh);
+    this.requestChunkMesh(cx, cz);
   }
 
   update(playerX: number, playerZ: number): void {
@@ -269,14 +176,25 @@ export class World {
       for (let dz = -RENDER_DISTANCE; dz <= RENDER_DISTANCE; dz++) {
         const cx = centerCX + dx;
         const cz = centerCZ + dz;
-        const key = this.chunkKey(cx, cz);
+        this.loadChunk(cx, cz);
+      }
+    }
 
-        if (!this.chunkMeshes.has(key)) {
-          const chunk = this.getChunk(cx, cz);
-          const mesh = chunk.buildMesh(this.materials);
-          this.scene.add(mesh);
-          this.chunkMeshes.set(key, mesh);
+    // Optional: unload far chunks to save memory
+    this.unloadFarChunks(centerCX, centerCZ);
+  }
+
+  private unloadFarChunks(centerCX: number, centerCZ: number): void {
+    const unloadDistance = RENDER_DISTANCE + 2;
+    for (const [key, chunk] of this.chunks.entries()) {
+      const dx = Math.abs(chunk.chunkX - centerCX);
+      const dz = Math.abs(chunk.chunkZ - centerCZ);
+      if (dx > unloadDistance || dz > unloadDistance) {
+        if (this.modifiedChunkBlocks.has(key)) {
+          this.modifiedChunkBlocks.set(key, chunk.blocks.slice());
         }
+        this.disposeChunkMesh(key);
+        this.chunks.delete(key);
       }
     }
   }

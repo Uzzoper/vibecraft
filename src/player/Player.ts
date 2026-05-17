@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { Controls } from "./Controls";
 import { MobileControls } from "./MobileControls";
-import { BlockType } from "../Block";
 import { World } from "../world/World";
+import { BlockType } from "../world/BlockType";
 import { AudioManager } from "../utils/AudioManager";
 
 const SPEED = 5.0;
