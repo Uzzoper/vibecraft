@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { inject } from "@vercel/analytics";
 import { createEngine } from "./engine/createEngine";
+import { createDayNightState } from "./rendering/dayNight";
 import { World } from "./world/World";
 import { Controls } from "./player/Controls";
 import { MobileControls } from "./player/MobileControls";
@@ -18,10 +19,8 @@ const CHUNK_SIZE = 16;
 const MOBILE_INTERACTION_COOLDOWN = 0.18;
 
 // Day/night cycle constants
-const CYCLE_DURATION = 240; // 4 minutes in seconds
-
 const { scene, camera, renderer, clock, skyColors, lights } = createEngine();
-const { ambientLight, directionalLight, moonLight, hemisphereLight } = lights;
+const dayNight = createDayNightState(scene, renderer, skyColors, lights);
 
 // World
 const world = new World(scene);
@@ -229,70 +228,6 @@ renderer.domElement.addEventListener("mousedown", event => {
   }
 });
 
-// === DAY/NIGHT CYCLE ===
-let cycleTime = 0; // seconds elapsed in current cycle (0..CYCLE_DURATION, loops)
-const SUN_START_ANGLE = Math.PI * 0.2; // starts above horizon (morning)
-const SUN_ANGLE_SPEED = (Math.PI * 2) / CYCLE_DURATION; // full rotation per cycle
-
-function getSunAngle(): number {
-  // Sun moves in a full circle over the cycle
-  // At angle 0 = midnight (behind ground), PI = noon
-  return SUN_START_ANGLE + cycleTime * SUN_ANGLE_SPEED;
-}
-
-function updateDayNightCycle(deltaTime: number): void {
-  cycleTime += deltaTime;
-  if (cycleTime >= CYCLE_DURATION) {
-    cycleTime -= CYCLE_DURATION;
-  }
-
-  const sunAngle = getSunAngle();
-
-  // Sun position: circular motion, clamped above ground
-  const sunX = Math.cos(sunAngle) * 100;
-  const sunY = Math.max(Math.sin(sunAngle) * 100, 5); // min height 5 so it never goes too low
-  const sunZ = Math.sin(sunAngle * 0.3) * 50; // slight Z drift for variety
-  directionalLight.position.set(sunX, sunY, sunZ);
-
-  // Moon opposite to sun
-  moonLight.position.set(-sunX * 0.5, Math.max(-sunY * 0.3 + 80, 40), -sunZ * 0.5);
-
-  // Smooth light intensity based on sun height
-  const sunHeight = Math.sin(sunAngle);
-  const isDay = sunHeight > 0;
-
-  // Ambient light: bright during day, dim at night
-  const ambientIntensity = isDay ? THREE.MathUtils.mapLinear(sunHeight, 0, 1, 0.2, 0.8) : 0.08;
-  ambientLight.intensity = THREE.MathUtils.lerp(ambientLight.intensity, ambientIntensity, 0.05);
-
-  // Directional light: strong during day, off at night
-  directionalLight.intensity = isDay ? THREE.MathUtils.mapLinear(sunHeight, 0, 1, 0.05, 1.0) : 0.0;
-
-  // Moon light: on at night
-  moonLight.intensity = isDay
-    ? 0.0
-    : THREE.MathUtils.mapLinear(Math.max(-sunHeight, 0), 0, 1, 0.0, 0.25);
-
-  // Hemisphere light
-  hemisphereLight.intensity = isDay ? THREE.MathUtils.mapLinear(sunHeight, 0, 1, 0.05, 0.4) : 0.03;
-
-  // Sky color: smooth gradient between day and night
-  const skyLerp = THREE.MathUtils.smoothstep(THREE.MathUtils.clamp(sunHeight * 4, -1, 1), -1, 1);
-  (scene.background as THREE.Color).lerpColors(
-    skyColors.day,
-    skyColors.night,
-    THREE.MathUtils.clamp(1 - skyLerp, 0, 1),
-  );
-  (scene.fog as THREE.Fog).color.lerpColors(
-    skyColors.day,
-    skyColors.night,
-    THREE.MathUtils.clamp(1 - skyLerp, 0, 1),
-  );
-
-  // Renderer tone mapping for day/night feel
-  renderer.toneMappingExposure = isDay ? THREE.MathUtils.mapLinear(sunHeight, 0, 1, 0.6, 1.2) : 0.3;
-}
-
 // === ZOMBIE SYSTEM ===
 const ZOMBIE_MAX_COUNT = 3;
 const ZOMBIE_SPAWN_INTERVAL = 15; // seconds between spawn attempts at night
@@ -317,7 +252,7 @@ function updateZombies(deltaTime: number): void {
   lastZombieSpawnTime += deltaTime;
 
   // Spawn at night
-  const sunAngle = getSunAngle();
+  const sunAngle = dayNight.getSunAngle();
   const isNight = Math.sin(sunAngle) < 0;
 
   if (isNight && lastZombieSpawnTime >= ZOMBIE_SPAWN_INTERVAL) {
@@ -378,13 +313,8 @@ function updateHUD(): void {
   }
 
   // Cycle indicator
-  const isNight = Math.sin(getSunAngle()) < 0;
-  const sunAngle = getSunAngle();
-  const currentQuadrant = Math.floor(sunAngle / Math.PI);
-  const nextCrossing = (currentQuadrant + 1) * Math.PI;
-  const secondsLeft = (nextCrossing - sunAngle) / SUN_ANGLE_SPEED;
-  const minutesLeft = secondsLeft / 60;
-  cycleIndicator.textContent = isNight
+  const minutesLeft = dayNight.getMinutesLeft();
+  cycleIndicator.textContent = dayNight.isNight()
     ? `🌙 ${t("cycleNight")} - ${minutesLeft.toFixed(0)} ${t("cycleMinSuffixNight")}`
     : `☀️ ${t("cycleDay")} - ${minutesLeft.toFixed(0)} ${t("cycleMinSuffix")}`;
 }
@@ -504,7 +434,7 @@ function animate(): void {
   }
 
   // Always update day/night cycle
-  updateDayNightCycle(delta);
+  dayNight.update(delta);
 
   // Update zombies
   if (player) {
