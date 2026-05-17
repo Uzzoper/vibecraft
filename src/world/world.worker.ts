@@ -8,7 +8,6 @@ const MAX_HEIGHT = 64;
 const FACE_DEFINITIONS = [
   {
     normal: [1, 0, 0],
-    neighbor: [1, 0, 0],
     corners: [
       [1, 0, 0],
       [1, 1, 0],
@@ -18,7 +17,6 @@ const FACE_DEFINITIONS = [
   },
   {
     normal: [-1, 0, 0],
-    neighbor: [-1, 0, 0],
     corners: [
       [0, 0, 1],
       [0, 1, 1],
@@ -28,7 +26,6 @@ const FACE_DEFINITIONS = [
   },
   {
     normal: [0, 1, 0],
-    neighbor: [0, 1, 0],
     corners: [
       [0, 1, 1],
       [1, 1, 1],
@@ -38,7 +35,6 @@ const FACE_DEFINITIONS = [
   },
   {
     normal: [0, -1, 0],
-    neighbor: [0, -1, 0],
     corners: [
       [0, 0, 0],
       [1, 0, 0],
@@ -48,7 +44,6 @@ const FACE_DEFINITIONS = [
   },
   {
     normal: [0, 0, 1],
-    neighbor: [0, 0, 1],
     corners: [
       [0, 0, 1],
       [1, 0, 1],
@@ -58,7 +53,6 @@ const FACE_DEFINITIONS = [
   },
   {
     normal: [0, 0, -1],
-    neighbor: [0, 0, -1],
     corners: [
       [1, 0, 0],
       [0, 0, 0],
@@ -108,8 +102,9 @@ function isFaceVisible(
   z: number,
   currentBlockType: BlockType,
 ): boolean {
-  if (y < 0) return false;
-  if (x < 0 || x >= CHUNK_SIZE || y >= MAX_HEIGHT || z < 0 || z >= CHUNK_SIZE) return true;
+  if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= MAX_HEIGHT || z < 0 || z >= CHUNK_SIZE) {
+    return true;
+  }
   const neighbor = blocks[getIndex(x, y, z)];
   if (neighbor === BlockType.Air) return true;
   if (neighbor === BlockType.Water) return currentBlockType !== BlockType.Water;
@@ -158,9 +153,9 @@ function buildMeshData(blocks: Uint8Array): Record<number, MeshBuffers> {
         const buffers = buffersByType[type];
 
         for (const face of FACE_DEFINITIONS) {
-          const nx = x + face.neighbor[0];
-          const ny = y + face.neighbor[1];
-          const nz = z + face.neighbor[2];
+          const nx = x + face.normal[0];
+          const ny = y + face.normal[1];
+          const nz = z + face.normal[2];
           if (!isFaceVisible(blocks, nx, ny, nz, type)) continue;
 
           addFace(buffers, x, y, z, face.corners, face.normal);
