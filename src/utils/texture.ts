@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { BLOCKS, BlockDefinition, BlockType } from "../Block";
+import { BLOCKS, BlockDefinition } from "../Block";
+import { BlockType } from "../world/BlockType";
 
 const textureLoader = new THREE.TextureLoader();
 const cache = new Map<string, THREE.Texture>();

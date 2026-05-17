@@ -4,10 +4,11 @@ import { World } from "./world/World";
 import { Controls } from "./player/Controls";
 import { MobileControls } from "./player/MobileControls";
 import { Player } from "./player/Player";
-import { BLOCK_TYPES, BlockType } from "./Block";
+import { BLOCK_TYPES } from "./Block";
 import { AudioManager } from "./utils/AudioManager";
 import { Zombie } from "./mobs/Zombie";
 import { t, setLocale, getLocale } from "./i18n/i18n";
+import { BlockType } from "./world/BlockType";
 import "./globals.css";
 
 inject();
