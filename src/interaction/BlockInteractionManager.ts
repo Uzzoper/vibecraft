@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { BLOCK_TYPES, BlockDefinition } from "../Block";
+import { BLOCK_TYPES, BlockDefinition } from "../world/Block";
 import { BlockType } from "../world/BlockType";
 import { World } from "../world/World";
 import { Player } from "../player/Player";
