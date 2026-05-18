@@ -4,13 +4,8 @@ import { MobileControls } from "./MobileControls";
 import { World } from "../world/World";
 import { BlockType } from "../world/BlockType";
 import { AudioManager } from "../utils/AudioManager";
+import { PlayerPhysics } from "./PlayerPhysics";
 
-const SPEED = 5.0;
-const GRAVITY = -8.0;
-const JUMP_FORCE = 4.5;
-const TERMINAL_FALL_SPEED = -18.0;
-const PLAYER_HEIGHT = 2.0;
-const PLAYER_WIDTH = 0.6;
 const MOUSE_SENSITIVITY = 0.002;
 
 export class Player {
@@ -29,7 +24,8 @@ export class Player {
   public dead: boolean = false;
   private respawnTimer: number = 0;
   private drownTimer: number = 0;
-  private readonly DROWN_INTERVAL = 5; // seconds between damage while submerged
+  private readonly DROWN_INTERVAL = 5;
+  private physics: PlayerPhysics;
 
   constructor(
     camera: THREE.Camera,
@@ -43,8 +39,9 @@ export class Player {
     this.mobileControls = mobileControls || null;
     this.world = world;
     this.audio = audio;
-    this.position = new THREE.Vector3(8, 20, 8);
-    this.velocity = new THREE.Vector3(0, 0, 0);
+    this.physics = new PlayerPhysics(world);
+    this.position = this.physics.position;
+    this.velocity = this.physics.velocity;
     this.euler = new THREE.Euler(0, 0, 0, "YXZ");
     this.updateCamera();
   }
@@ -117,29 +114,31 @@ export class Player {
 
     const isMoving = moveDir.length() > 0;
     if (isMoving) {
-      moveDir.normalize().multiplyScalar(SPEED * deltaTime);
-      this.tryMoveHorizontal(moveDir.x, moveDir.z);
+      moveDir.normalize().multiplyScalar(this.physics.getSpeed() * deltaTime);
+      this.physics.tryMoveHorizontal(moveDir.x, moveDir.z);
     }
 
     // Jump (only if on ground)
     const wantsToJump = this.controls.moveUp || (this.mobileControls?.jump ?? false);
-    if (wantsToJump && this.onGround) {
-      this.velocity.y = JUMP_FORCE;
-      this.onGround = false;
+    if (wantsToJump && this.physics.onGround) {
+      this.physics.jump(this.physics.getJumpForce());
       this.audio.play("jump", 0.6);
     }
 
     // Physics
-    if (!this.onGround) {
-      this.velocity.y += GRAVITY * deltaTime;
-      this.velocity.y = Math.max(this.velocity.y, TERMINAL_FALL_SPEED);
-    }
+    this.physics.applyGravity(deltaTime);
 
     // Move vertically (handles landing and sets onGround)
-    this.tryMoveVertical(deltaTime);
+    this.physics.tryMoveVertical(deltaTime);
+
+    // Sync physics state to player
+    this.onGround = this.physics.onGround;
+    this.position = this.physics.position;
+    this.velocity = this.physics.velocity;
 
     // After vertical movement, detect walking off edges
-    if (!this.checkGroundBelow() && this.onGround) {
+    if (!this.physics.checkGroundBelow() && this.physics.onGround) {
+      this.physics.onGround = false;
       this.onGround = false;
     }
 
@@ -149,91 +148,10 @@ export class Player {
     this.updateCamera();
   }
 
-  private checkGroundBelow(): boolean {
-    // Check if there is a solid block directly below the player's feet
-    // Check several points under the player's bounding box
-    for (let dx = -PLAYER_WIDTH / 2; dx <= PLAYER_WIDTH / 2; dx += 0.5) {
-      for (let dz = -PLAYER_WIDTH / 2; dz <= PLAYER_WIDTH / 2; dz += 0.5) {
-        const bx = Math.floor(this.position.x + dx);
-        const by = Math.floor(this.position.y) - 1;
-        const bz = Math.floor(this.position.z + dz);
-
-        if (this.isSolidBlock(bx, by, bz)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  private tryMoveHorizontal(dx: number, dz: number): void {
-    const newX = this.position.x + dx;
-    const newZ = this.position.z + dz;
-
-    // Check for horizontal collision at current Y
-    if (!this.checkCollisionAt(newX, this.position.y, this.position.z)) {
-      this.position.x = newX;
-    }
-    if (!this.checkCollisionAt(this.position.x, this.position.y, newZ)) {
-      this.position.z = newZ;
-    }
-  }
-
-  private tryMoveVertical(deltaTime: number): void {
-    const dy = this.velocity.y * deltaTime;
-    if (dy === 0) return;
-
-    const newY = this.position.y + dy;
-
-    if (dy < 0) {
-      // Falling down — check if we hit something below
-      if (!this.checkCollisionAt(this.position.x, newY, this.position.z)) {
-        this.position.y = newY;
-        this.onGround = false;
-      } else {
-        // Land on top of a block: snap to the block surface
-        this.position.y = Math.floor(this.position.y);
-        this.velocity.y = 0;
-        this.onGround = true;
-      }
-    } else if (dy > 0) {
-      // Moving up — check if we hit a block above
-      if (!this.checkCollisionAt(this.position.x, newY, this.position.z)) {
-        this.position.y = newY;
-      } else {
-        this.velocity.y = 0;
-      }
-    }
-  }
-
-  private checkCollisionAt(x: number, y: number, z: number): boolean {
-    // Sample several points within the player's bounding box
-    for (let dy = 0; dy <= PLAYER_HEIGHT; dy += 0.5) {
-      for (let dx = -PLAYER_WIDTH / 2; dx <= PLAYER_WIDTH / 2; dx += 0.5) {
-        for (let dz = -PLAYER_WIDTH / 2; dz <= PLAYER_WIDTH / 2; dz += 0.5) {
-          const bx = Math.floor(x + dx);
-          const by = Math.floor(y + dy);
-          const bz = Math.floor(z + dz);
-
-          if (this.isSolidBlock(bx, by, bz)) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  }
-
-  private isSolidBlock(bx: number, by: number, bz: number): boolean {
-    const block = this.world.getBlock(bx, by, bz);
-    return block !== undefined && block > 0 && block !== BlockType.Water;
-  }
-
   private isInWater(): boolean {
     const bx = Math.floor(this.position.x);
     const by = Math.floor(this.position.y);
     const bz = Math.floor(this.position.z);
-    // Check from feet to head height (player is 2 blocks tall)
     for (let dy = 0; dy <= 2; dy++) {
       if (this.world.getBlock(bx, by + dy, bz) === BlockType.Water) {
         return true;
@@ -246,7 +164,7 @@ export class Player {
     if (this.invincibleTimer > 0) return;
     if (this.dead) return;
     this.health -= amount;
-    this.invincibleTimer = 1.0; // 1 second of invincibility
+    this.invincibleTimer = 1.0;
     this.audio.play("break", 0.5);
     if (this.health <= 0) {
       this.health = 0;
@@ -256,20 +174,28 @@ export class Player {
   }
 
   private respawn(): void {
-    this.position.set(8, 20, 8);
-    this.velocity.set(0, 0, 0);
+    this.physics.position.set(8, 20, 8);
+    this.physics.velocity.set(0, 0, 0);
+    this.physics.onGround = false;
+    this.position = this.physics.position;
+    this.velocity = this.physics.velocity;
+    this.onGround = this.physics.onGround;
     this.health = this.maxHealth;
     this.dead = false;
   }
 
   private updateCamera(): void {
-    this.camera.position.set(this.position.x, this.position.y + PLAYER_HEIGHT, this.position.z);
+    this.camera.position.set(
+      this.position.x,
+      this.position.y + this.physics.getPlayerHeight(),
+      this.position.z,
+    );
   }
 
   getEyePosition(): THREE.Vector3 {
     return new THREE.Vector3(
       this.position.x,
-      this.position.y + PLAYER_HEIGHT - 0.2,
+      this.position.y + this.physics.getPlayerHeight() - 0.2,
       this.position.z,
     );
   }
