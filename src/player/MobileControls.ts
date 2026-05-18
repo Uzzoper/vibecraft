@@ -1,13 +1,5 @@
 import { t, subscribeLocaleChange } from "../i18n/i18n";
-
-export interface TouchState {
-  active: boolean;
-  startX: number;
-  startY: number;
-  currentX: number;
-  currentY: number;
-  identifier: number;
-}
+import { VirtualJoystick, TouchState } from "./VirtualJoystick";
 
 export class MobileControls {
   public moveX = 0;
@@ -19,19 +11,18 @@ export class MobileControls {
   public cameraDeltaY = 0;
   public isMobile = false;
 
-  private joystickTouch: TouchState | null = null;
+  private joystick: VirtualJoystick;
   private cameraTouch: TouchState | null = null;
   private jumpButton!: HTMLButtonElement;
   private breakButton!: HTMLButtonElement;
   private placeButton!: HTMLButtonElement;
-  private joystickElement!: HTMLDivElement;
-  private joystickKnob!: HTMLDivElement;
   private _isVisible = false;
   private actionContainer!: HTMLDivElement;
   private unsubscribeLocaleChange: (() => void) | null = null;
 
   constructor() {
     this.isMobile = this.detectTouch();
+    this.joystick = new VirtualJoystick();
     if (!this.isMobile) return;
 
     this.createUI();
@@ -52,20 +43,9 @@ export class MobileControls {
   }
 
   private createUI(): void {
-    // Joystick container (floating)
-    this.joystickElement = document.createElement("div");
-    this.joystickElement.id = "joystick";
-
-    this.joystickKnob = document.createElement("div");
-    this.joystickKnob.id = "joystick-knob";
-    this.joystickElement.appendChild(this.joystickKnob);
-    document.body.appendChild(this.joystickElement);
-
-    // Action buttons container
     this.actionContainer = document.createElement("div");
     this.actionContainer.id = "action-buttons";
 
-    // Jump button
     this.jumpButton = document.createElement("button");
     this.jumpButton.id = "jump-btn";
     this.jumpButton.className = "action-btn";
@@ -73,7 +53,6 @@ export class MobileControls {
     this.jumpButton.title = t("jumpTooltip");
     this.actionContainer.appendChild(this.jumpButton);
 
-    // Break block button
     this.breakButton = document.createElement("button");
     this.breakButton.id = "break-btn";
     this.breakButton.className = "action-btn";
@@ -81,7 +60,6 @@ export class MobileControls {
     this.breakButton.title = t("breakTooltip");
     this.actionContainer.appendChild(this.breakButton);
 
-    // Place block button
     this.placeButton = document.createElement("button");
     this.placeButton.id = "place-btn";
     this.placeButton.className = "action-btn";
@@ -95,25 +73,18 @@ export class MobileControls {
   }
 
   private repositionControls(): void {
-    const joystick = document.getElementById("joystick");
     const actions = document.getElementById("action-buttons");
 
-    if (!joystick || !actions) return;
+    if (!actions) return;
 
     const display = this._isVisible ? "flex" : "none";
-    joystick.style.display = display;
     actions.style.display = display;
+
+    this.joystick.reposition();
 
     if (!this._isVisible) return;
 
     if (this.isPortrait()) {
-      // Portrait: center-bottom layout
-      joystick.style.left = "50%";
-      joystick.style.right = "auto";
-      joystick.style.top = "auto";
-      joystick.style.bottom = "180px";
-      joystick.style.transform = "translateX(-50%)";
-
       actions.style.left = "auto";
       actions.style.right = "max(24px, env(safe-area-inset-right))";
       actions.style.top = "auto";
@@ -121,12 +92,6 @@ export class MobileControls {
       actions.style.transform = "none";
       actions.style.flexDirection = "column";
     } else {
-      // Landscape: bottom-left joystick, bottom-right actions
-      joystick.style.left = "30px";
-      joystick.style.top = "auto";
-      joystick.style.bottom = "150px";
-      joystick.style.transform = "none";
-
       actions.style.right = "max(24px, env(safe-area-inset-right))";
       actions.style.left = "auto";
       actions.style.top = "auto";
@@ -154,7 +119,6 @@ export class MobileControls {
     screen.addEventListener("touchend", e => this.onTouchEnd(e), { passive: false });
     screen.addEventListener("touchcancel", e => this.onTouchEnd(e), { passive: false });
 
-    // Button listeners
     this.jumpButton.addEventListener("touchstart", e => {
       e.preventDefault();
       e.stopPropagation();
@@ -185,7 +149,6 @@ export class MobileControls {
       this.placeBlock = false;
     });
 
-    // Reposition on orientation change
     window.addEventListener("resize", () => {
       this.repositionControls();
     });
@@ -194,30 +157,18 @@ export class MobileControls {
   private onTouchStart(e: TouchEvent): void {
     e.preventDefault();
 
+    this.joystick.onTouchStart(e);
+
     for (const touch of Array.from(e.changedTouches)) {
       const x = touch.clientX;
-      const y = touch.clientY;
 
-      // Left half of screen = joystick
-      if (x < window.innerWidth / 2 && !this.joystickTouch) {
-        this.joystickTouch = {
-          active: true,
-          startX: x,
-          startY: y,
-          currentX: x,
-          currentY: y,
-          identifier: touch.identifier,
-        };
-        this.showJoystick(x, y);
-      }
-      // Right half of screen = camera
-      else if (x >= window.innerWidth / 2 && !this.cameraTouch) {
+      if (x >= window.innerWidth / 2 && !this.cameraTouch) {
         this.cameraTouch = {
           active: true,
-          startX: x,
-          startY: y,
-          currentX: x,
-          currentY: y,
+          startX: touch.clientX,
+          startY: touch.clientY,
+          currentX: touch.clientX,
+          currentY: touch.clientY,
           identifier: touch.identifier,
         };
       }
@@ -227,12 +178,9 @@ export class MobileControls {
   private onTouchMove(e: TouchEvent): void {
     e.preventDefault();
 
+    this.joystick.onTouchMove(e);
+
     for (const touch of Array.from(e.changedTouches)) {
-      if (this.joystickTouch && touch.identifier === this.joystickTouch.identifier) {
-        this.joystickTouch.currentX = touch.clientX;
-        this.joystickTouch.currentY = touch.clientY;
-        this.updateJoystick();
-      }
       if (this.cameraTouch && touch.identifier === this.cameraTouch.identifier) {
         const deltaX = touch.clientX - this.cameraTouch.currentX;
         const deltaY = touch.clientY - this.cameraTouch.currentY;
@@ -245,13 +193,9 @@ export class MobileControls {
   }
 
   private onTouchEnd(e: TouchEvent): void {
+    this.joystick.onTouchEnd(e);
+
     for (const touch of Array.from(e.changedTouches)) {
-      if (this.joystickTouch && touch.identifier === this.joystickTouch.identifier) {
-        this.joystickTouch = null;
-        this.moveX = 0;
-        this.moveY = 0;
-        this.hideJoystick();
-      }
       if (this.cameraTouch && touch.identifier === this.cameraTouch.identifier) {
         this.cameraTouch = null;
         this.cameraDeltaX = 0;
@@ -260,39 +204,9 @@ export class MobileControls {
     }
   }
 
-  private showJoystick(x: number, y: number): void {
-    this.joystickElement.style.display = "flex";
-    this.joystickElement.style.left = `${x - 60}px`;
-    this.joystickElement.style.top = `${y - 60}px`;
-    this.joystickKnob.style.transform = "translate(0px, 0px)";
-  }
-
-  private updateJoystick(): void {
-    if (!this.joystickTouch) return;
-
-    const maxDist = 35;
-    let dx = this.joystickTouch.currentX - this.joystickTouch.startX;
-    let dy = this.joystickTouch.currentY - this.joystickTouch.startY;
-
-    const dist = Math.hypot(dx, dy);
-    if (dist > maxDist) {
-      dx = (dx / dist) * maxDist;
-      dy = (dy / dist) * maxDist;
-    }
-
-    this.joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
-
-    // Normalize to -1 to 1
-    this.moveX = dx / maxDist;
-    this.moveY = dy / maxDist;
-  }
-
-  private hideJoystick(): void {
-    this.joystickElement.style.display = "none";
-  }
-
   update(): void {
-    // Reset camera deltas after they're consumed
+    this.moveX = this.joystick.moveX;
+    this.moveY = this.joystick.moveY;
     this.cameraDeltaX = 0;
     this.cameraDeltaY = 0;
   }
@@ -306,5 +220,6 @@ export class MobileControls {
   destroy(): void {
     this.unsubscribeLocaleChange?.();
     this.unsubscribeLocaleChange = null;
+    this.joystick.destroy();
   }
 }
