@@ -95,7 +95,7 @@ export class ZombieManager {
     const spawnX = this.player.position.x + Math.cos(angle) * distance;
     const spawnZ = this.player.position.z + Math.sin(angle) * distance;
 
-    const zombie = new Zombie(this.world, this.player, spawnX, spawnZ);
+    const zombie = new Zombie(this.world, this.player, spawnX, spawnZ, this.audioManager);
     this.zombies.push(zombie);
 
     this.scene.add(zombie.mesh);

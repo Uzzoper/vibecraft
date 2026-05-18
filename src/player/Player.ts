@@ -35,14 +35,14 @@ export class Player {
     camera: THREE.Camera,
     controls: Controls,
     world: World,
+    audio: AudioManager,
     mobileControls?: MobileControls,
-    audio?: AudioManager,
   ) {
     this.camera = camera;
     this.controls = controls;
     this.mobileControls = mobileControls || null;
     this.world = world;
-    this.audio = audio || AudioManager.get();
+    this.audio = audio;
     this.position = new THREE.Vector3(8, 20, 8);
     this.velocity = new THREE.Vector3(0, 0, 0);
     this.euler = new THREE.Euler(0, 0, 0, "YXZ");

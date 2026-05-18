@@ -23,7 +23,7 @@ world.update(8, 8);
 
 const controls = new Controls(camera, renderer.domElement);
 const mobileControls = new MobileControls();
-const audioManager = AudioManager.get();
+const audioManager = new AudioManager();
 
 let player: Player;
 let zombieManager: ZombieManager;
@@ -76,7 +76,7 @@ ui.healthBarBg.style.display = "none";
 ui.cycleIndicator.style.display = "none";
 
 await audioManager.loadAll();
-player = new Player(camera, controls, world, mobileControls, audioManager);
+player = new Player(camera, controls, world, audioManager, mobileControls);
 playerMovementManager.setPlayer(player);
 
 zombieManager = new ZombieManager({
