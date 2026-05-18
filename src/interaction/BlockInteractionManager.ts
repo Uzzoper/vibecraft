@@ -103,7 +103,7 @@ export class BlockInteractionManager {
 
         const hit = this.raycastBlock();
         if (hit) {
-          this.world.setBlock(hit.position.x, hit.position.y, hit.position.z, 0 as BlockType);
+          this.world.setBlock(hit.position.x, hit.position.y, hit.position.z, BlockType.Air);
           this.audioManager.play("break", 0.5);
         }
         this.mobileBreakCooldown = MOBILE_INTERACTION_COOLDOWN;
@@ -262,7 +262,7 @@ export class BlockInteractionManager {
       }
 
       if (!hit) return;
-      this.world.setBlock(hit.position.x, hit.position.y, hit.position.z, 0 as BlockType);
+      this.world.setBlock(hit.position.x, hit.position.y, hit.position.z, BlockType.Air);
       this.audioManager.play("break", 0.5);
     } else if (event.button === 2) {
       if (!hit) return;
