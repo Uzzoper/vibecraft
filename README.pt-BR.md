@@ -129,44 +129,57 @@ vibecraft/
 ├── src/
 │   ├── main.ts            # Entry point — setup da cena, game loop, UI
 │   ├── Block.ts           # Definições dos tipos de bloco e materiais
-│   ├── globals.css        # Estilos de toda a UI/HUD
-│   ├── player/
-│   │   ├── Controls.ts    # Pointer lock + input de teclado
-│   │   ├── MobileControls.ts  # Joystick virtual + botões touch
-│   │   └── Player.ts      # Física, colisão, vida e câmera
-│   ├── world/
-│   │   ├── Chunk.ts       # Chunk 16x64x16 com storage e mesh merging
-│   │   └── World.ts       # Gerenciamento do mundo, geração de terreno
+│   ├── core/
+│   │   └── PlayerMovementManager.ts
+│   ├── engine/
+│   │   └── createEngine.ts
+│   ├── i18n/
+│   │   ├── i18n.ts
+│   │   └── translations.ts
+│   ├── interaction/
+│   │   ├── BlockInteractionManager.ts
+│   │   └── ZombieManager.ts
 │   ├── mobs/
-│   │   └── Zombie.ts      # IA, mesh, pathfinding e combate
-│   └── utils/
-│       ├── noise.ts       # Value noise 2D/3D com octaves
-│       ├── texture.ts     # Carregamento e cache de texturas
-│       └── AudioManager.ts # Web Audio API com singleton
-├── index.html             # HTML base com fonte Press Start 2P
+│   │   └── Zombie.ts
+│   ├── player/
+│   │   ├── Controls.ts
+│   │   ├── MobileControls.ts
+│   │   └── Player.ts
+│   ├── rendering/
+│   │   └── dayNight.ts
+│   ├── ui/
+│   │   └── gameUi.ts
+│   ├── utils/
+│   │   ├── AudioManager.ts
+│   │   ├── noise.ts
+│   │   └── texture.ts
+│   ├── world/
+│   │   ├── BlockType.ts
+│   │   ├── Chunk.ts
+│   │   ├── terrain.ts
+│   │   ├── World.ts
+│   │   └── world.worker.ts
+├── index.html
 ├── package.json
 ├── tsconfig.json
-├── vite.config.ts
-└── eslint.config.js
+└── vite.config.ts
 ```
 
 ### Diagrama de Dependências
 
 ```
 main.ts
-├── World ──────────────┬── Chunk ────────────┬── Block.ts
-│                       │                     └── noise.ts
-│                       ├── texture.ts ───────┤
-│                       └── noise.ts ─────────┘
-├── Player ─────────────┬── Controls.ts
-│                       ├── MobileControls.ts
-│                       ├── World (ref)
-│                       └── AudioManager
-├── MobileControls.ts
-├── Zombie ─────────────┬── World (ref)
-│                       ├── Player (ref)
-│                       └── AudioManager
-└── AudioManager.ts (singleton)
+├── engine/createEngine.ts
+├── rendering/dayNight.ts
+├── ui/gameUi.ts
+├── world/World.ts
+├── player/Controls.ts
+├── player/MobileControls.ts
+├── utils/AudioManager.ts
+├── core/PlayerMovementManager.ts
+├── interaction/ZombieManager.ts
+├── interaction/BlockInteractionManager.ts
+└── mobs/Zombie.ts
 ```
 
 ---
@@ -213,7 +226,7 @@ O terreno é gerado proceduralmente por chunk usando **value noise multi-octave*
 4. **Água subterrânea**: Espaços de ar abaixo de y=10 com teto sólido são preenchidos com Water
 5. **Árvores**: `octaveNoise2D` com offset determina ~25% de densidade — tronco (4-6 blocos) + copa 3x3 em 2 níveis
 
-### Ciclo Dia/Noite (`main.ts`)
+### Ciclo Dia/Noite (`rendering/dayNight.ts`)
 
 | Parâmetro | Valor |
 |---|---|
@@ -264,7 +277,7 @@ O sol se move em um arco circular completo. Intensidades de luz (ambient, direct
 
 **Colisão**: O jogador é representado por uma bounding box de 0.6x2.0x0.6. Pontos de amostragem a cada 0.5 unidades verificam blocos sólidos. Movimento horizontal e vertical são tratados separadamente para permitir deslizar ao longo de paredes.
 
-### Raycasting (`main.ts`)
+### Raycasting (`interaction/BlockInteractionManager.ts`)
 
 Raycasting baseado em **step traversal** (não Three.js Raycaster para blocos):
 - Step size: 0.1 unidades
@@ -274,7 +287,7 @@ Raycasting baseado em **step traversal** (não Three.js Raycaster para blocos):
 
 ### Áudio (`AudioManager.ts`)
 
-Singleton usando **Web Audio API** (`AudioContext`):
+Usando **injeção de dependência via construtor** (não singleton):
 
 | Som | Arquivo | Gatilho |
 |---|---|---|
@@ -284,6 +297,41 @@ Singleton usando **Web Audio API** (`AudioContext`):
 | Zombie | `zombie.ogg` | Rosnado de zombie |
 
 **Otimização**: Sons são trimados no carregamento para remover silêncio inicial. Passos reutilizam o som de "place" em volume reduzido (0.25) com intervalo de 0.35s.
+
+### PlayerMovementManager (`core/PlayerMovementManager.ts`)
+
+Gerencia a lógica de movimento do jogador incluindo:
+- Processamento de entrada do teclado dos Controls
+- Aplicação de física de gravidade e pulo
+- Detecção de colisão com blocos do mundo
+- Atualização da posição e velocidade do jogador
+- Separação de movimento horizontal e vertical para deslizamento suave nas paredes
+
+### BlockInteractionManager (`interaction/BlockInteractionManager.ts`)
+
+Gerencia as interações com blocos incluindo:
+- Raycasting para detectar hits em blocos
+- Processamento de clique esquerdo (remoção de bloco) e clique direito (colocação de bloco)
+- Reprodução de efeitos sonoros apropriados via AudioManager injetado
+- Atualização dos dados do chunk e marcação para reconstrução de mesh
+- Tratamento de restrições de colocação de bloco (adjacente à face hit)
+
+### ZombieManager (`interaction/ZombieManager.ts`)
+
+Controla o spawn e comportamento dos zumbis incluindo:
+- Spawn de zumbis à noite em intervalos configuráveis
+- Gerenciamento do ciclo de vida dos zumbis (spawn, update, despawn)
+- Distribuição de instâncias AudioManager para zumbis para efeitos sonoros
+- Tratamento do despawn de zumbis quando muito distantes do jogador
+- Coordenação dos ataques dos zumbis no jogador
+
+### Internacionalização (`i18n/`)
+
+Fornece suporte a múltiplos idiomas através de:
+- `i18n.ts`: Lógica de inicialização e troca de idioma
+- `translations.ts`: Estrutura JSON-like contendo todas as strings traduzíveis
+- Adição fácil de novos idiomas estendendo o objeto de traduções
+- Integração com componentes UI para atualizações dinâmicas de idioma
 
 ---
 
@@ -316,9 +364,13 @@ Em vez de criar um `THREE.Mesh` por bloco (o que resultaria em milhares de draw 
 
 O raycaster do Three.js funciona com geometrias de mesh, que são merged. Isso torna impossível identificar qual bloco individual foi hit. O step-based raycaster percorre o grid de blocos diretamente, permitindo identificação precisa do bloco e da face atingida.
 
-### Por que Singleton para AudioManager?
+### Por que DI por Construtor para AudioManager?
 
-O `AudioContext` é um recurso pesado que deve ser compartilhado. O singleton garante uma única instância em toda a aplicação, evitando múltiplos contextos de áudio.
+Em vez de um singleton, AudioManager é instanciado uma vez em main.ts e injetado via construtor nas classes dependentes (Player, Zombie, ZombieManager, BlockInteractionManager). Essa abordagem:
+- Torna as dependências explícitas e mais fáceis de testar
+- Evita instâncias acidentais múltiplas de AudioContext
+- Permite melhor gerenciamento de recursos
+- Segue princípios de injeção de dependência para acoplamento mais fraco
 
 ---
 
