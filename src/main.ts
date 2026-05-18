@@ -96,6 +96,7 @@ blockInteractionManager = new BlockInteractionManager({
   zombieManager,
   dayNight,
   mobileControls,
+  scene,
 });
 
 blockInteractionManager.addOutlineToScene(scene);
