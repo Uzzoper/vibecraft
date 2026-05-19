@@ -129,44 +129,57 @@ vibecraft/
 ├── src/
 │   ├── main.ts            # Entry point — scene setup, game loop, UI
 │   ├── Block.ts           # Block type definitions and materials
-│   ├── globals.css        # All UI/HUD styles
-│   ├── player/
-│   │   ├── Controls.ts    # Pointer lock + keyboard input
-│   │   ├── MobileControls.ts  # Virtual joystick + touch buttons
-│   │   └── Player.ts      # Physics, collision, health, and camera
-│   ├── world/
-│   │   ├── Chunk.ts       # 16x64x16 chunk with storage and mesh merging
-│   │   └── World.ts       # World manager, terrain generation
+│   ├── core/
+│   │   └── PlayerMovementManager.ts
+│   ├── engine/
+│   │   └── createEngine.ts
+│   ├── i18n/
+│   │   ├── i18n.ts
+│   │   └── translations.ts
+│   ├── interaction/
+│   │   ├── BlockInteractionManager.ts
+│   │   └── ZombieManager.ts
 │   ├── mobs/
-│   │   └── Zombie.ts      # AI, mesh, pathfinding, and combat
-│   └── utils/
-│       ├── noise.ts       # 2D/3D value noise with octaves
-│       ├── texture.ts     # Texture loading and caching
-│       └── AudioManager.ts # Web Audio API singleton
-├── index.html             # Base HTML with Press Start 2P font
+│   │   └── Zombie.ts
+│   ├── player/
+│   │   ├── Controls.ts
+│   │   ├── MobileControls.ts
+│   │   └── Player.ts
+│   ├── rendering/
+│   │   └── dayNight.ts
+│   ├── ui/
+│   │   └── gameUi.ts
+│   ├── utils/
+│   │   ├── AudioManager.ts
+│   │   ├── noise.ts
+│   │   └── texture.ts
+│   ├── world/
+│   │   ├── BlockType.ts
+│   │   ├── Chunk.ts
+│   │   ├── terrain.ts
+│   │   ├── World.ts
+│   │   └── world.worker.ts
+├── index.html
 ├── package.json
 ├── tsconfig.json
-├── vite.config.ts
-└── eslint.config.js
+└── vite.config.ts
 ```
 
 ### Dependency Diagram
 
 ```
 main.ts
-├── World ──────────────┬── Chunk ────────────┬── Block.ts
-│                       │                     └── noise.ts
-│                       ├── texture.ts ───────┤
-│                       └── noise.ts ─────────┘
-├── Player ─────────────┬── Controls.ts
-│                       ├── MobileControls.ts
-│                       ├── World (ref)
-│                       └── AudioManager
-├── MobileControls.ts
-├── Zombie ─────────────┬── World (ref)
-│                       ├── Player (ref)
-│                       └── AudioManager
-└── AudioManager.ts (singleton)
+├── engine/createEngine.ts
+├── rendering/dayNight.ts
+├── ui/gameUi.ts
+├── world/World.ts
+├── player/Controls.ts
+├── player/MobileControls.ts
+├── utils/AudioManager.ts
+├── core/PlayerMovementManager.ts
+├── interaction/ZombieManager.ts
+├── interaction/BlockInteractionManager.ts
+└── mobs/Zombie.ts
 ```
 
 ---
@@ -213,7 +226,7 @@ Terrain is generated procedurally per chunk using **multi-octave value noise**:
 4. **Underground water**: Air pockets below y=10 with a solid ceiling are filled with Water
 5. **Trees**: `octaveNoise2D` with offset determines ~25% density — trunk (4-6 blocks) + 3x3 canopy at 2 levels
 
-### Day/Night Cycle (`main.ts`)
+### Day/Night Cycle (`rendering/dayNight.ts`)
 
 | Parameter | Value |
 |---|---|
@@ -264,7 +277,7 @@ The sun moves in a full circular arc. Light intensities (ambient, directional, m
 
 **Collision**: The player is represented by a 0.6x2.0x0.6 bounding box. Sample points every 0.5 units check for solid blocks. Horizontal and vertical movement are handled separately to allow sliding along walls.
 
-### Raycasting (`main.ts`)
+### Raycasting (`interaction/BlockInteractionManager.ts`)
 
 **Step traversal**-based raycasting (not Three.js Raycaster for blocks):
 - Step size: 0.1 units
@@ -274,7 +287,7 @@ The sun moves in a full circular arc. Light intensities (ambient, directional, m
 
 ### Audio (`AudioManager.ts`)
 
-Singleton using **Web Audio API** (`AudioContext`):
+Using **constructor dependency injection** (not a singleton):
 
 | Sound | File | Trigger |
 |---|---|---|
@@ -284,6 +297,41 @@ Singleton using **Web Audio API** (`AudioContext`):
 | Zombie | `zombie.ogg` | Zombie growl |
 
 **Optimization**: Sounds are trimmed on load to remove initial silence. Footsteps reuse the "place" sound at reduced volume (0.25) with a 0.35s interval.
+
+### PlayerMovementManager (`core/PlayerMovementManager.ts`)
+
+Handles player movement logic including:
+- Processing keyboard input from Controls
+- Applying gravity and jump physics
+- Collision detection with world blocks
+- Updating player position and velocity
+- Separating horizontal and vertical movement for smooth wall sliding
+
+### BlockInteractionManager (`interaction/BlockInteractionManager.ts`)
+
+Manages block interactions including:
+- Raycasting to detect block hits
+- Processing left-click (block removal) and right-click (block placement)
+- Playing appropriate sound effects via injected AudioManager
+- Updating chunk data and marking chunks for mesh rebuild
+- Handling block placement constraints (adjacent to hit face)
+
+### ZombieManager (`interaction/ZombieManager.ts`)
+
+Controls zombie spawning and behavior including:
+- Spawning zombies at night at configurable intervals
+- Managing zombie lifecycle (spawn, update, despawn)
+- Distributing AudioManager instances to zombies for sound effects
+- Handling zombie despawning when too far from player
+- Coordinating zombie attacks on the player
+
+### Internationalization (`i18n/`)
+
+Provides multi-language support through:
+- `i18n.ts`: Core initialization and language switching logic
+- `translations.ts`: JSON-like structure containing all translatable strings
+- Easy addition of new languages by extending the translations object
+- Integration with UI components for dynamic language updates
 
 ---
 
@@ -316,9 +364,13 @@ Instead of creating one `THREE.Mesh` per block (which would result in thousands 
 
 Three.js's raycaster works with mesh geometries, which are merged. This makes it impossible to identify which individual block was hit. The step-based raycaster traverses the block grid directly, enabling precise block and face identification.
 
-### Why Singleton for AudioManager?
+### Why Constructor DI for AudioManager?
 
-`AudioContext` is a heavy resource that should be shared. The singleton ensures a single instance throughout the application, avoiding multiple audio contexts.
+Instead of a singleton, AudioManager is instantiated once in main.ts and injected via constructor into dependent classes (Player, Zombie, ZombieManager, BlockInteractionManager). This approach:
+- Makes dependencies explicit and easier to test
+- Prevents accidental multiple AudioContext instances
+- Allows for better resource management
+- Follows dependency injection principles for looser coupling
 
 ---
 

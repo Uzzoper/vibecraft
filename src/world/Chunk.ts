@@ -4,8 +4,6 @@ import { BlockType } from "./BlockType";
 const CHUNK_SIZE = 16;
 const MAX_HEIGHT = 64;
 
-export type LODLevel = 0 | 1 | 2;
-
 export interface WorkerMeshData {
   [key: number]: {
     positions: Float32Array;

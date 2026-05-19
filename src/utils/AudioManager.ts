@@ -7,7 +7,6 @@ const SOUND_PATHS: Record<string, string> = {
 };
 
 export class AudioManager {
-  private static instance: AudioManager;
   private ctx: AudioContext;
   private buffers: Map<string, AudioBuffer> = new Map();
   private stepTimer = 0;
@@ -15,18 +14,11 @@ export class AudioManager {
   private underwaterSource: AudioBufferSourceNode | null = null;
   private underwaterGain: GainNode | null = null;
 
-  private constructor() {
+  constructor() {
     const AC =
       globalThis.AudioContext ??
       (globalThis as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.ctx = new AC();
-  }
-
-  static get(): AudioManager {
-    if (!AudioManager.instance) {
-      AudioManager.instance = new AudioManager();
-    }
-    return AudioManager.instance;
   }
 
   /**

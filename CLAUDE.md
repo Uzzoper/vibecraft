@@ -38,6 +38,9 @@ Click on the game window to lock the pointer and start playing.
 - **Right Click**: Place block
 - **Scroll / 1-5 keys**: Select block type
 
+## Architecture notes
+- **AudioManager** is no longer a singleton. It is instantiated once in `src/main.ts` (`const audioManager = new AudioManager();`) and **injected via constructor** into `Player`, `Zombie`, `ZombieManager` and `BlockInteractionManager`. This makes the audio system explicit, easier to test, and prevents accidental multiple `AudioContext` instances.
+
 ## Project Structure
 
 ```
@@ -47,15 +50,36 @@ vibecraft/
 ├── src/
 │   ├── main.ts            # Entry point, scene setup, game loop
 │   ├── Block.ts           # Block type definitions
+│   ├── core/
+│   │   └── PlayerMovementManager.ts
+│   ├── engine/
+│   │   └── createEngine.ts
+│   ├── i18n/
+│   │   ├── i18n.ts
+│   │   └── translations.ts
+│   ├── interaction/
+│   │   ├── BlockInteractionManager.ts
+│   │   └── ZombieManager.ts
+│   ├── mobs/
+│   │   └── Zombie.ts
 │   ├── player/
-│   │   ├── Controls.ts    # Pointer lock and keyboard input
-│   │   └── Player.ts     # Player physics and collision
+│   │   ├── Controls.ts
+│   │   ├── MobileControls.ts
+│   │   └── Player.ts
+│   ├── rendering/
+│   │   └── dayNight.ts
+│   ├── ui/
+│   │   └── gameUi.ts
+│   ├── utils/
+│   │   ├── AudioManager.ts
+│   │   ├── noise.ts
+│   │   └── texture.ts
 │   ├── world/
-│   │   ├── Chunk.ts       # 16x16 chunk with block storage and mesh
-│   │   └── World.ts      # World manager, terrain generation
-│   └── utils/
-│       ├── noise.ts       # 2D value noise for terrain
-│       └── texture.ts     # Texture loading and material creation
+│   │   ├── BlockType.ts
+│   │   ├── Chunk.ts
+│   │   ├── terrain.ts
+│   │   ├── World.ts
+│   │   └── world.worker.ts
 ├── index.html
 ├── package.json
 ├── tsconfig.json

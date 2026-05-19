@@ -1,5 +1,5 @@
-import { t } from "./i18n/i18n";
-import { BlockType } from "./world/BlockType";
+import { t } from "../i18n/i18n";
+import { BlockType } from "./BlockType";
 
 export interface BlockDefinition {
   id: BlockType;

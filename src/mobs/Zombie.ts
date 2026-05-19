@@ -14,6 +14,7 @@ export class Zombie {
   public alive: boolean = true;
   private world: World;
   private target: Player;
+  private audioManager: AudioManager;
   private damageTimer: number = 0;
   private burnTimer: number = 0;
   public health: number = 10;
@@ -26,9 +27,10 @@ export class Zombie {
   private growlTimer: number = 0;
   private currentSoundSource: AudioBufferSourceNode | null = null;
 
-  constructor(world: World, target: Player, x: number, z: number) {
+  constructor(world: World, target: Player, x: number, z: number, audioManager: AudioManager) {
     this.world = world;
     this.target = target;
+    this.audioManager = audioManager;
     this.position = new THREE.Vector3(x, 0, z);
     this.mesh = this.createMesh();
 
@@ -180,7 +182,7 @@ export class Zombie {
           this.currentSoundSource = null;
         }
         const volume = THREE.MathUtils.mapLinear(dist, 0, 15, 0.5, 0.1);
-        this.currentSoundSource = AudioManager.get().play("zombie", volume);
+        this.currentSoundSource = this.audioManager.play("zombie", volume);
       }
     } else {
       this.growlTimer = 0;

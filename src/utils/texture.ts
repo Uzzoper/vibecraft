@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { BLOCKS, BlockDefinition } from "../Block";
+import { BLOCKS, BlockDefinition } from "../world/Block";
 import { BlockType } from "../world/BlockType";
 
 const textureLoader = new THREE.TextureLoader();
