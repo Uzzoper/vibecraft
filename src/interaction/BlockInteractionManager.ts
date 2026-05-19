@@ -5,7 +5,6 @@ import { World } from "../world/World";
 import { Player } from "../player/Player";
 import { AudioManager } from "../utils/AudioManager";
 import { ZombieManager } from "./ZombieManager";
-import { DayNightState } from "../rendering/dayNight";
 import { MobileControls } from "../player/MobileControls";
 import { BlockRaycaster } from "./BlockRaycaster";
 import { BlockInteractionView } from "./BlockInteractionView";
@@ -19,7 +18,6 @@ export interface BlockInteractionManagerDeps {
   player: Player;
   audioManager: AudioManager;
   zombieManager: ZombieManager;
-  dayNight: DayNightState;
   mobileControls: MobileControls;
   scene: THREE.Scene;
 }

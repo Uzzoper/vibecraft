@@ -198,33 +198,4 @@ export class World {
       }
     }
   }
-
-  raycast(
-    origin: THREE.Vector3,
-    direction: THREE.Vector3,
-    maxDistance: number = 6,
-  ): {
-    position: THREE.Vector3;
-    normal: THREE.Vector3;
-    blockType: BlockType;
-  } | null {
-    const step = 0.1;
-    const steps = maxDistance / step;
-
-    for (let i = 1; i <= steps; i++) {
-      const x = Math.floor(origin.x + direction.x * step * i);
-      const y = Math.floor(origin.y + direction.y * step * i);
-      const z = Math.floor(origin.z + direction.z * step * i);
-
-      const block = this.getBlock(x, y, z);
-      if (block !== undefined && block > 0) {
-        return {
-          position: new THREE.Vector3(x, y, z),
-          normal: new THREE.Vector3(0, 0, 0), // simplified
-          blockType: block,
-        };
-      }
-    }
-    return null;
-  }
 }

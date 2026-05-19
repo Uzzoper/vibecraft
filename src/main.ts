@@ -94,7 +94,6 @@ blockInteractionManager = new BlockInteractionManager({
   player,
   audioManager,
   zombieManager,
-  dayNight,
   mobileControls,
   scene,
 });
