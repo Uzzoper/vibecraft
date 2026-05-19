@@ -188,13 +188,16 @@ export class Zombie {
       this.growlTimer = 0;
     }
 
-    // Attack player on contact
+    // Attack player on contact (must be close horizontally AND vertically)
     if (dist < 1.5) {
-      this.damageTimer += deltaTime;
-      if (this.damageTimer > 0.8) {
-        this.target.damage(ZOMBIE_DAMAGE);
-        this.damageTimer = 0;
-        this.attackAnimTimer = this.ATTACK_ANIM_DURATION;
+      const dy = Math.abs(this.target.position.y - this.position.y);
+      if (dy < 1.8) {
+        this.damageTimer += deltaTime;
+        if (this.damageTimer > 0.8) {
+          this.target.damage(ZOMBIE_DAMAGE);
+          this.damageTimer = 0;
+          this.attackAnimTimer = this.ATTACK_ANIM_DURATION;
+        }
       }
     }
 
