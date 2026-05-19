@@ -119,6 +119,40 @@ export class Zombie {
     return 1;
   }
 
+  private tryMoveTowardPlayer(deltaTime: number): void {
+    const dx = this.target.position.x - this.position.x;
+    const dz = this.target.position.z - this.position.z;
+    const dist = Math.hypot(dx, dz);
+
+    if (dist <= 1.2 || dist >= DESPAWN_DISTANCE) return;
+
+    // Normalized direction toward player
+    const dirX = dx / dist;
+    const dirZ = dz / dist;
+
+    // Try 3 directions: forward, left, right
+    const directions = [
+      { x: dirX, z: dirZ }, // forward
+      { x: -dirZ, z: dirX }, // left (90° CCW)
+      { x: dirZ, z: -dirX }, // right (90° CW)
+    ];
+
+    const speed = ZOMBIE_SPEED * deltaTime;
+
+    for (const dir of directions) {
+      const newX = this.position.x + dir.x * speed;
+      const newZ = this.position.z + dir.z * speed;
+      const headY = this.findGroundY(newX, newZ);
+
+      if (headY - this.position.y <= 1.5) {
+        this.position.x = newX;
+        this.position.z = newZ;
+        this.position.y = headY;
+        return; // found a valid direction
+      }
+    }
+  }
+
   update(deltaTime: number): void {
     if (!this.alive) return;
 
@@ -150,26 +184,12 @@ export class Zombie {
     }
 
     // Move toward player
-    if (dist > 1.2 && dist < DESPAWN_DISTANCE) {
-      const moveX = (dx / dist) * ZOMBIE_SPEED * deltaTime;
-      const moveZ = (dz / dist) * ZOMBIE_SPEED * deltaTime;
+    this.tryMoveTowardPlayer(deltaTime);
 
-      const newX = this.position.x + moveX;
-      const newZ = this.position.z + moveZ;
-
-      // Simple collision with blocks
-      const headY = this.findGroundY(newX, newZ);
-      if (headY - this.position.y <= 1.5) {
-        this.position.x = newX;
-        this.position.z = newZ;
-        this.position.y = headY;
-      }
-
-      // Face toward player
-      this.mesh.lookAt(
-        new THREE.Vector3(this.target.position.x, this.position.y, this.target.position.z),
-      );
-    }
+    // Face toward player
+    this.mesh.lookAt(
+      new THREE.Vector3(this.target.position.x, this.position.y, this.target.position.z),
+    );
 
     // Proximity sound — louder when closer
     if (dist < 15) {
