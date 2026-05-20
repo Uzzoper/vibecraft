@@ -142,6 +142,7 @@ canvas {
   align-items: center;
   z-index: 1000;
   touch-action: none;
+  pointer-events: none;
 }
 
 /* Joystick inner knob */

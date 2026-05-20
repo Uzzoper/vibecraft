@@ -152,7 +152,7 @@ export function generateTerrain(cx: number, cz: number): Uint8Array {
       const worldZ = baseZ + z;
 
       const treeNoise = octaveNoise2D(worldX * 0.15 + 100, worldZ * 0.15 + 100, 2, 0.5);
-      if (treeNoise < 0.55) continue;
+      if (treeNoise < 0.6) continue;
 
       for (let y = MAX_HEIGHT - 1; y >= 0; y--) {
         const block = getBlock(blocks, x, y, z);

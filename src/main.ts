@@ -41,6 +41,11 @@ function animate(): void {
   if (document.pointerLockElement === renderer.domElement || isMobileActive) {
     playerMovementManager.update(delta);
 
+    const pickedUpItem = player.tryPickupItems(blockInteractionManager.getItems());
+    if (pickedUpItem) {
+      blockInteractionManager.refreshHotbar();
+    }
+
     if (blockInteractionManager) {
       blockInteractionManager.update(delta, isMobileActive);
     }
@@ -94,7 +99,6 @@ blockInteractionManager = new BlockInteractionManager({
   player,
   audioManager,
   zombieManager,
-  dayNight,
   mobileControls,
   scene,
 });
