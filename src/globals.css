@@ -152,6 +152,7 @@ canvas {
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.5);
   position: absolute;
+  pointer-events: none;
 }
 
 /* Action buttons container */
