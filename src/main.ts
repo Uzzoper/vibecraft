@@ -43,7 +43,7 @@ function animate(): void {
 
     const pickedUpItem = player.tryPickupItems(blockInteractionManager.getItems());
     if (pickedUpItem) {
-      blockInteractionManager.updateHotbar(player.inventory);
+      blockInteractionManager.refreshHotbar();
     }
 
     if (blockInteractionManager) {

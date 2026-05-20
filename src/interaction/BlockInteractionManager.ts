@@ -26,13 +26,13 @@ export interface BlockInteractionManagerDeps {
 export class BlockInteractionManager {
   private renderer: THREE.WebGLRenderer;
   private world: World;
+  private player: Player;
   private audioManager: AudioManager;
   private mobileControls: MobileControls;
   private scene: THREE.Scene;
   private raycaster: BlockRaycaster;
   private view: BlockInteractionView;
   private selectedBlockIndex = 0;
-  private inventory: Map<BlockType, number> = new Map();
   private mobileBreakCooldown = 0;
   private mobilePlaceCooldown = 0;
   private items: ItemEntity[] = [];
@@ -45,6 +45,7 @@ export class BlockInteractionManager {
   constructor(deps: BlockInteractionManagerDeps) {
     this.renderer = deps.renderer;
     this.world = deps.world;
+    this.player = deps.player;
     this.audioManager = deps.audioManager;
     this.mobileControls = deps.mobileControls;
     this.scene = deps.scene;
@@ -65,24 +66,28 @@ export class BlockInteractionManager {
   }
 
   private refreshBlockUI(): void {
-    this.view.updateBlockUI(this.inventory, this.selectedBlockIndex, this.boundBlockSelectHandler);
+    this.view.updateBlockUI(
+      this.player.inventory,
+      this.selectedBlockIndex,
+      this.boundBlockSelectHandler,
+    );
   }
 
   private canPlaceSelectedBlock(): boolean {
     const selectedType = this.getSelectedBlockType();
-    const count = this.inventory.get(selectedType) || 0;
+    const count = this.player.inventory.get(selectedType) || 0;
     return count > 0;
   }
 
   private consumeSelectedBlock(): void {
     const selectedType = this.getSelectedBlockType();
-    const count = this.inventory.get(selectedType) || 0;
+    const count = this.player.inventory.get(selectedType) || 0;
     if (count > 0) {
       const newCount = count - 1;
       if (newCount > 0) {
-        this.inventory.set(selectedType, newCount);
+        this.player.inventory.set(selectedType, newCount);
       } else {
-        this.inventory.delete(selectedType);
+        this.player.inventory.delete(selectedType);
       }
       this.refreshBlockUI();
     }
@@ -164,7 +169,7 @@ export class BlockInteractionManager {
   getSelectedBlockType(): BlockType {
     // Get the block type from the selected inventory slot
     const collectedBlocks: BlockType[] = [];
-    this.inventory.forEach((count, blockType) => {
+    this.player.inventory.forEach((count, blockType) => {
       if (count > 0) {
         collectedBlocks.push(blockType);
       }
@@ -188,9 +193,8 @@ export class BlockInteractionManager {
     return fallbackBlocks[this.selectedBlockIndex % fallbackBlocks.length];
   }
 
-  updateHotbar(inventory: Map<BlockType, number>): void {
-    this.inventory = new Map(inventory);
-    this.view.updateBlockUI(inventory, this.selectedBlockIndex, this.boundBlockSelectHandler);
+  refreshHotbar(): void {
+    this.refreshBlockUI();
   }
 
   getItems(): ItemEntity[] {
