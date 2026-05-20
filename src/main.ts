@@ -41,6 +41,11 @@ function animate(): void {
   if (document.pointerLockElement === renderer.domElement || isMobileActive) {
     playerMovementManager.update(delta);
 
+    const pickedUpItem = player.tryPickupItems(blockInteractionManager.getItems());
+    if (pickedUpItem) {
+      blockInteractionManager.updateHotbar(player.inventory);
+    }
+
     if (blockInteractionManager) {
       blockInteractionManager.update(delta, isMobileActive);
     }

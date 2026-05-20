@@ -5,6 +5,7 @@ import { World } from "../world/World";
 import { BlockType } from "../world/BlockType";
 import { AudioManager } from "../utils/AudioManager";
 import { PlayerPhysics } from "./PlayerPhysics";
+import { ItemEntity } from "../world/ItemEntity";
 
 const MOUSE_SENSITIVITY = 0.002;
 
@@ -26,6 +27,7 @@ export class Player {
   private drownTimer: number = 0;
   private readonly DROWN_INTERVAL = 5;
   private physics: PlayerPhysics;
+  public inventory: Map<BlockType, number> = new Map();
 
   constructor(
     camera: THREE.Camera,
@@ -198,5 +200,18 @@ export class Player {
       this.position.y + this.physics.getPlayerHeight() - 0.2,
       this.position.z,
     );
+  }
+
+  tryPickupItems(items: ItemEntity[]): BlockType | null {
+    for (const item of items) {
+      if (!item.alive) continue;
+      if (item.canPickupBy(this.position)) {
+        const count = this.inventory.get(item.blockType) || 0;
+        this.inventory.set(item.blockType, count + 1);
+        item.alive = false;
+        return item.blockType;
+      }
+    }
+    return null;
   }
 }
