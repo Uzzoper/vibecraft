@@ -38,6 +38,31 @@ export const BLOCKS: Partial<Record<BlockType, BlockDefinition>> = {
     name: t("blockWater"),
     texturePath: "/textures/water.png",
   },
+  [BlockType.Sand]: {
+    id: BlockType.Sand,
+    name: t("blockSand"),
+    texturePath: "/textures/sand.png",
+  },
+  [BlockType.Snow]: {
+    id: BlockType.Snow,
+    name: t("blockSnow"),
+    texturePath: "/textures/snow.png",
+  },
+  [BlockType.Glass]: {
+    id: BlockType.Glass,
+    name: t("blockGlass"),
+    texturePath: "/textures/glass.png",
+  },
+  [BlockType.Brick]: {
+    id: BlockType.Brick,
+    name: t("blockBrick"),
+    texturePath: "/textures/brick.png",
+  },
+  [BlockType.Sandstone]: {
+    id: BlockType.Sandstone,
+    name: t("blockSandstone"),
+    texturePath: "/textures/sandstone.png",
+  },
 };
 
 export const BLOCK_TYPES = Object.values(BLOCKS).filter(
