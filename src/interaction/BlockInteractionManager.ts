@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { BLOCK_TYPES, BlockDefinition } from "../world/Block";
+import { BLOCK_TYPES } from "../world/Block";
 import { BlockType } from "../world/BlockType";
 import { World } from "../world/World";
 import { Player } from "../player/Player";
@@ -8,6 +8,7 @@ import { ZombieManager } from "./ZombieManager";
 import { MobileControls } from "../player/MobileControls";
 import { BlockRaycaster } from "./BlockRaycaster";
 import { BlockInteractionView } from "./BlockInteractionView";
+import { ItemEntity } from "../world/ItemEntity";
 
 const MOBILE_INTERACTION_COOLDOWN = 0.18;
 
@@ -27,12 +28,14 @@ export class BlockInteractionManager {
   private world: World;
   private audioManager: AudioManager;
   private mobileControls: MobileControls;
+  private scene: THREE.Scene;
   private raycaster: BlockRaycaster;
   private view: BlockInteractionView;
   private selectedBlockIndex = 0;
-  private blockTypes: BlockDefinition[] = BLOCK_TYPES;
+  private inventory: Map<BlockType, number> = new Map();
   private mobileBreakCooldown = 0;
   private mobilePlaceCooldown = 0;
+  private items: ItemEntity[] = [];
   private boundMousedownHandler: (event: MouseEvent) => void;
   private boundWheelHandler: (event: WheelEvent) => void;
   private boundKeydownHandler: (event: KeyboardEvent) => void;
@@ -44,6 +47,7 @@ export class BlockInteractionManager {
     this.world = deps.world;
     this.audioManager = deps.audioManager;
     this.mobileControls = deps.mobileControls;
+    this.scene = deps.scene;
     this.raycaster = new BlockRaycaster({
       camera: deps.camera,
       player: deps.player,
@@ -61,7 +65,27 @@ export class BlockInteractionManager {
   }
 
   private refreshBlockUI(): void {
-    this.view.updateBlockUI(this.blockTypes, this.selectedBlockIndex, this.boundBlockSelectHandler);
+    this.view.updateBlockUI(this.inventory, this.selectedBlockIndex, this.boundBlockSelectHandler);
+  }
+
+  private canPlaceSelectedBlock(): boolean {
+    const selectedType = this.getSelectedBlockType();
+    const count = this.inventory.get(selectedType) || 0;
+    return count > 0;
+  }
+
+  private consumeSelectedBlock(): void {
+    const selectedType = this.getSelectedBlockType();
+    const count = this.inventory.get(selectedType) || 0;
+    if (count > 0) {
+      const newCount = count - 1;
+      if (newCount > 0) {
+        this.inventory.set(selectedType, newCount);
+      } else {
+        this.inventory.delete(selectedType);
+      }
+      this.refreshBlockUI();
+    }
   }
 
   setupEventListeners(): void {
@@ -82,12 +106,29 @@ export class BlockInteractionManager {
         }
         const hit = this.raycaster.raycastBlock();
         if (hit) {
+          const brokenBlock = this.world.getBlock(hit.position.x, hit.position.y, hit.position.z);
+          if (brokenBlock > 0 && brokenBlock !== BlockType.Water) {
+            const item = new ItemEntity(
+              brokenBlock,
+              hit.position.x,
+              hit.position.y,
+              hit.position.z,
+              this.world,
+            );
+            this.items.push(item);
+            this.scene.add(item.mesh);
+          }
           this.world.setBlock(hit.position.x, hit.position.y, hit.position.z, BlockType.Air);
           this.audioManager.play("break", 0.5);
         }
         this.mobileBreakCooldown = MOBILE_INTERACTION_COOLDOWN;
       }
       if (this.mobileControls.placeBlock && this.mobilePlaceCooldown === 0) {
+        if (!this.canPlaceSelectedBlock()) {
+          this.view.showEmptyInventoryWarning();
+          this.mobilePlaceCooldown = MOBILE_INTERACTION_COOLDOWN;
+          return;
+        }
         const hit = this.raycaster.raycastBlock();
         if (hit) {
           const placePos = hit.position.clone().add(hit.normal);
@@ -98,12 +139,20 @@ export class BlockInteractionManager {
             blockAtPlace === BlockType.Water
           ) {
             this.world.setBlock(placePos.x, placePos.y, placePos.z, this.getSelectedBlockType());
+            this.consumeSelectedBlock();
             this.audioManager.play("place", 0.5);
           }
         }
         this.mobilePlaceCooldown = MOBILE_INTERACTION_COOLDOWN;
       }
     }
+    for (const item of this.items) {
+      item.update(deltaTime);
+      if (!item.alive) {
+        item.destroy();
+      }
+    }
+    this.items = this.items.filter(i => i.alive);
     const hitBlock = this.raycaster.raycastBlock();
     const showOutline = !!(
       hitBlock &&
@@ -113,7 +162,39 @@ export class BlockInteractionManager {
   }
 
   getSelectedBlockType(): BlockType {
-    return this.blockTypes[this.selectedBlockIndex].id;
+    // Get the block type from the selected inventory slot
+    const collectedBlocks: BlockType[] = [];
+    this.inventory.forEach((count, blockType) => {
+      if (count > 0) {
+        collectedBlocks.push(blockType);
+      }
+    });
+
+    // If we have collected blocks, return the selected one
+    if (collectedBlocks.length > 0) {
+      const adjustedIndex = this.selectedBlockIndex % collectedBlocks.length;
+      return collectedBlocks[adjustedIndex];
+    }
+
+    // Fallback to original behavior if inventory is empty
+    // We need to get the block types from somewhere - let's use a default list for now
+    const fallbackBlocks: BlockType[] = [
+      BlockType.Grass,
+      BlockType.Dirt,
+      BlockType.Stone,
+      BlockType.Wood,
+      BlockType.Leaves,
+    ];
+    return fallbackBlocks[this.selectedBlockIndex % fallbackBlocks.length];
+  }
+
+  updateHotbar(inventory: Map<BlockType, number>): void {
+    this.inventory = new Map(inventory);
+    this.view.updateBlockUI(inventory, this.selectedBlockIndex, this.boundBlockSelectHandler);
+  }
+
+  getItems(): ItemEntity[] {
+    return this.items;
   }
 
   destroy(): void {
@@ -152,14 +233,31 @@ export class BlockInteractionManager {
     if (event.button === 0) {
       if (this.raycaster.tryHitZombie()) return;
       if (!hit) return;
+      const brokenBlock = this.world.getBlock(hit.position.x, hit.position.y, hit.position.z);
+      if (brokenBlock > 0 && brokenBlock !== BlockType.Water) {
+        const item = new ItemEntity(
+          brokenBlock,
+          hit.position.x,
+          hit.position.y,
+          hit.position.z,
+          this.world,
+        );
+        this.items.push(item);
+        this.scene.add(item.mesh);
+      }
       this.world.setBlock(hit.position.x, hit.position.y, hit.position.z, BlockType.Air);
       this.audioManager.play("break", 0.5);
     } else if (event.button === 2) {
       if (!hit) return;
+      if (!this.canPlaceSelectedBlock()) {
+        this.view.showEmptyInventoryWarning();
+        return;
+      }
       const placePos = hit.position.clone().add(hit.normal);
       const blockAtPlace = this.world.getBlock(placePos.x, placePos.y, placePos.z);
       if (blockAtPlace === undefined || blockAtPlace === 0 || blockAtPlace === BlockType.Water) {
         this.world.setBlock(placePos.x, placePos.y, placePos.z, this.getSelectedBlockType());
+        this.consumeSelectedBlock();
         this.audioManager.play("place", 0.5);
       }
     }
@@ -169,14 +267,14 @@ export class BlockInteractionManager {
     event.preventDefault();
     this.selectedBlockIndex =
       event.deltaY > 0
-        ? (this.selectedBlockIndex + 1) % this.blockTypes.length
-        : (this.selectedBlockIndex - 1 + this.blockTypes.length) % this.blockTypes.length;
+        ? (this.selectedBlockIndex + 1) % BLOCK_TYPES.length
+        : (this.selectedBlockIndex - 1 + BLOCK_TYPES.length) % BLOCK_TYPES.length;
     this.refreshBlockUI();
   }
 
   private handleKeydown(event: KeyboardEvent): void {
     const num = parseInt(event.key);
-    if (num >= 1 && num <= this.blockTypes.length) {
+    if (num >= 1 && num <= BLOCK_TYPES.length) {
       this.selectedBlockIndex = num - 1;
       this.refreshBlockUI();
     }
