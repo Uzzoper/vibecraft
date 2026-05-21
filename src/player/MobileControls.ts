@@ -204,9 +204,12 @@ export class MobileControls {
     }
   }
 
-  update(): void {
+  syncMovement(): void {
     this.moveX = this.joystick.moveX;
     this.moveY = this.joystick.moveY;
+  }
+
+  resetCameraDeltas(): void {
     this.cameraDeltaX = 0;
     this.cameraDeltaY = 0;
   }
