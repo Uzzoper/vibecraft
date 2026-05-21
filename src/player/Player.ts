@@ -57,17 +57,16 @@ export class Player {
       return;
     }
 
-    // Camera rotation from mobile controls
-    if (
-      this.mobileControls &&
-      (this.mobileControls.cameraDeltaX !== 0 || this.mobileControls.cameraDeltaY !== 0)
-    ) {
-      this.euler.setFromQuaternion(this.camera.quaternion);
-      this.euler.y -= this.mobileControls.cameraDeltaX * MOUSE_SENSITIVITY;
-      this.euler.x -= this.mobileControls.cameraDeltaY * MOUSE_SENSITIVITY;
-      this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.euler.x));
-      this.camera.quaternion.setFromEuler(this.euler);
-      this.mobileControls.update();
+    if (this.mobileControls) {
+      this.mobileControls.syncMovement();
+
+      if (this.mobileControls.cameraDeltaX !== 0 || this.mobileControls.cameraDeltaY !== 0) {
+        this.euler.setFromQuaternion(this.camera.quaternion);
+        this.euler.y -= this.mobileControls.cameraDeltaX * MOUSE_SENSITIVITY;
+        this.euler.x -= this.mobileControls.cameraDeltaY * MOUSE_SENSITIVITY;
+        this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.euler.x));
+        this.camera.quaternion.setFromEuler(this.euler);
+      }
     }
 
     // Drowning: take 1 damage every 5 seconds while submerged
@@ -146,6 +145,8 @@ export class Player {
 
     // Footsteps
     this.audio.updateFootsteps(deltaTime, this.onGround, isMoving);
+
+    this.mobileControls?.resetCameraDeltas();
 
     this.updateCamera();
   }
