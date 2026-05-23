@@ -26,6 +26,7 @@ export class World {
   private pendingMeshes = new Set<string>();
   private chunksToRemesh = new Set<string>();
   private modifiedChunkBlocks = new Map<string, Uint8Array>();
+  private pendingChunks = new Set<string>();
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -41,6 +42,7 @@ export class World {
       const key = this.chunkKey(cx, cz);
 
       if (type === "GENERATE_AND_MESH_RESULT") {
+        this.pendingChunks.delete(key);
         let chunk = this.chunks.get(key);
         if (!chunk) {
           const savedBlocks = this.modifiedChunkBlocks.get(key);
@@ -82,10 +84,33 @@ export class World {
     if (this.chunks.has(key)) return;
 
     const savedBlocks = this.modifiedChunkBlocks.get(key);
-    const blocks = savedBlocks ? savedBlocks.slice() : generateTerrain(cx, cz);
-    const chunk = new Chunk(cx, cz, blocks);
-    this.chunks.set(key, chunk);
-    this.requestChunkMesh(cx, cz);
+
+    if (savedBlocks) {
+      // Existing behavior for modified chunks - generate locally
+      const blocks = savedBlocks.slice();
+      const chunk = new Chunk(cx, cz, blocks);
+      this.chunks.set(key, chunk);
+      this.requestChunkMesh(cx, cz);
+    } else {
+      // New behavior: post GENERATE_AND_MESH to worker for terrain generation
+      this.pendingChunks.add(key);
+      try {
+        this.worker.postMessage({
+          type: "GENERATE_AND_MESH",
+          cx,
+          cz,
+        });
+      } catch {
+        // Fallback to synchronous generation if worker fails
+        this.pendingChunks.delete(key);
+        const blocks = generateTerrain(cx, cz);
+        const chunk = new Chunk(cx, cz, blocks);
+        this.chunks.set(key, chunk);
+        this.requestChunkMesh(cx, cz);
+      }
+      // Do NOT create chunk or call requestChunkMesh here
+      // The GENERATE_AND_MESH_RESULT handler will create the chunk
+    }
   }
 
   private requestChunkMesh(cx: number, cz: number): void {
@@ -131,7 +156,13 @@ export class World {
   getBlock(worldX: number, worldY: number, worldZ: number): BlockType {
     const cx = Math.floor(worldX / CHUNK_SIZE);
     const cz = Math.floor(worldZ / CHUNK_SIZE);
-    const chunk = this.chunks.get(this.chunkKey(cx, cz));
+    const key = this.chunkKey(cx, cz);
+
+    if (this.pendingChunks.has(key)) {
+      return BlockType.Air;
+    }
+
+    const chunk = this.chunks.get(key);
     if (!chunk) return BlockType.Air;
 
     const lx = ((worldX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
@@ -144,6 +175,12 @@ export class World {
     const cx = Math.floor(worldX / CHUNK_SIZE);
     const cz = Math.floor(worldZ / CHUNK_SIZE);
     const key = this.chunkKey(cx, cz);
+
+    // Ignore block modifications for pending chunks
+    if (this.pendingChunks.has(key)) {
+      return;
+    }
+
     const chunk = this.chunks.get(key);
     if (!chunk) return;
 
