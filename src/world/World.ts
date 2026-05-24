@@ -42,7 +42,14 @@ export class World {
       const key = this.chunkKey(cx, cz);
 
       if (type === "GENERATE_AND_MESH_RESULT") {
-        this.pendingChunks.delete(key);
+        if (!this.pendingChunks.delete(key)) {
+          return;
+        }
+        if (!this.isChunkInRenderDistance(cx, cz)) {
+          this.chunksToRemesh.delete(key);
+          return;
+        }
+
         let chunk = this.chunks.get(key);
         if (!chunk) {
           const savedBlocks = this.modifiedChunkBlocks.get(key);
@@ -79,9 +86,17 @@ export class World {
     return `${cx},${cz}`;
   }
 
+  private isChunkInRenderDistance(cx: number, cz: number): boolean {
+    if (this.lastCenterCX === null || this.lastCenterCZ === null) return true;
+    return (
+      Math.abs(cx - this.lastCenterCX) <= RENDER_DISTANCE &&
+      Math.abs(cz - this.lastCenterCZ) <= RENDER_DISTANCE
+    );
+  }
+
   private loadChunk(cx: number, cz: number): void {
     const key = this.chunkKey(cx, cz);
-    if (this.chunks.has(key)) return;
+    if (this.chunks.has(key) || this.pendingChunks.has(key)) return;
 
     const savedBlocks = this.modifiedChunkBlocks.get(key);
 
