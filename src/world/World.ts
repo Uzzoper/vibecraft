@@ -15,9 +15,15 @@ interface WorkerMessage {
   meshData: WorkerMeshData;
 }
 
+interface SceneLike {
+  add: (obj: any) => void;
+  remove: (obj: any) => void;
+  traverse: (callback: (child: any) => void) => void;
+}
+
 export class World {
   private chunks = new Map<string, Chunk>();
-  private scene: THREE.Scene;
+  private scene: SceneLike;
   private materials: Map<number, THREE.Material>;
   private chunkMeshes = new Map<string, THREE.Group>();
   private lastCenterCX: number | null = null;
@@ -28,15 +34,15 @@ export class World {
   private modifiedChunkBlocks = new Map<string, Uint8Array>();
   private pendingChunks = new Set<string>();
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: SceneLike, worker?: Worker, workerBaseUrl?: string | URL) {
     this.scene = scene;
     this.materials = createAllMaterials();
 
-    // Initialize Web Worker
-    this.worker = new Worker(new URL("world.worker.ts", import.meta.url), {
-      type: "module",
-    });
-
+    this.worker =
+      worker ??
+      new Worker(new URL("world.worker.ts", workerBaseUrl ?? import.meta.url), {
+        type: "module",
+      });
     this.worker.addEventListener("message", e => {
       const { type, cx, cz, blocks, meshData } = e.data as WorkerMessage;
       const key = this.chunkKey(cx, cz);
