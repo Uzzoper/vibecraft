@@ -263,6 +263,7 @@ function frameMetricCollectorSource() {
 
   const frameIntervals = [];
   const longTasks = [];
+  window.__vibecraftPerfEvents = [];
   const startedAt = performance.now();
   let firstFrameAt = null;
   let lastFrameTimestamp = null;
@@ -309,6 +310,30 @@ function frameMetricCollectorSource() {
     };
   }
 
+  function summarizePerfEvents(events) {
+    const byName = {};
+    for (const event of events) {
+      byName[event.name] ??= [];
+      byName[event.name].push(event.duration);
+    }
+
+    const summary = {};
+    for (const [name, durations] of Object.entries(byName)) {
+      summary[name] = {
+        count: durations.length,
+        total: durations.reduce((sum, value) => sum + value, 0),
+        ...summarize(durations),
+      };
+    }
+
+    return {
+      summary,
+      slowest: [...events]
+        .sort((a, b) => b.duration - a.duration)
+        .slice(0, 20),
+    };
+  }
+
   window.__vibecraftFrameBenchmark = {
     getMetrics() {
       const frameStats = summarize(frameIntervals);
@@ -330,6 +355,7 @@ function frameMetricCollectorSource() {
           ...longTaskStats,
           samples: longTasks.slice(0, 20),
         },
+        perfEvents: summarizePerfEvents(window.__vibecraftPerfEvents),
       };
     },
   };
