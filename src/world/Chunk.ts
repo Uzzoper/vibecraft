@@ -1,8 +1,11 @@
 import * as THREE from "three";
 import { BlockType } from "./BlockType";
+import { recordPerformanceMetric } from "../utils/performanceMetrics";
 
 const CHUNK_SIZE = 16;
 const MAX_HEIGHT = 64;
+
+const LOCAL_CHUNK_BOUNDING_SPHERE = new THREE.Sphere(new THREE.Vector3(8, 32, 8), Math.sqrt(1152));
 
 export interface WorkerMeshData {
   [key: number]: {
@@ -44,6 +47,7 @@ export class Chunk {
   }
 
   applyMeshData(meshData: WorkerMeshData, materials: Map<number, THREE.Material>): THREE.Group {
+    const applyStart = performance.now();
     if (this.mesh) {
       this.mesh.traverse(child => {
         if (child instanceof THREE.Mesh) {
@@ -56,6 +60,9 @@ export class Chunk {
       this.mesh.position.set(this.chunkX * CHUNK_SIZE, 0, this.chunkZ * CHUNK_SIZE);
     }
 
+    let totalVertices = 0;
+    let materialMeshes = 0;
+
     for (const [typeStr, data] of Object.entries(meshData)) {
       const type = Number(typeStr);
       const material = materials.get(type);
@@ -65,14 +72,22 @@ export class Chunk {
         geometry.setAttribute("normal", new THREE.BufferAttribute(data.normals, 3));
         geometry.setAttribute("uv", new THREE.BufferAttribute(data.uvs, 2));
         geometry.setIndex(new THREE.BufferAttribute(data.indices, 1));
-        geometry.computeBoundingSphere();
+        geometry.boundingSphere = LOCAL_CHUNK_BOUNDING_SPHERE;
 
         const mesh = new THREE.Mesh(geometry, material);
         this.mesh.add(mesh);
+        materialMeshes++;
+        totalVertices += data.positions.length / 3;
       }
     }
 
     this.dirty = false;
+    recordPerformanceMetric("chunk.applyMeshData", performance.now() - applyStart, {
+      chunkX: this.chunkX,
+      chunkZ: this.chunkZ,
+      materialMeshes,
+      totalVertices,
+    });
     return this.mesh;
   }
 

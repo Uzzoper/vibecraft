@@ -48,7 +48,10 @@ describe('World integration', () => {
     world.update(0, 0);
 
     // Wait for chunk to be ready (with timeout)
-    await waitFor(() => chunks.has(key));
+    await waitFor(() => {
+      world.processQueuedWorkerMessages(8);
+      return chunks.has(key);
+    });
 
     const chunk = chunks.get(key);
     expect(chunk).toBeDefined();

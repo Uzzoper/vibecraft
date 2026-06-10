@@ -24,9 +24,17 @@ export class BufferAttribute {
   ) {}
 }
 
+export class Sphere {
+  constructor(
+    public center: Vector3 = new Vector3(),
+    public radius: number = 0,
+  ) {}
+}
+
 export class BufferGeometry {
   attributes = new Map<string, BufferAttribute>();
   index: BufferAttribute | null = null;
+  boundingSphere: Sphere | null = null;
 
   setAttribute(name: string, attribute: BufferAttribute): void {
     this.attributes.set(name, attribute);
@@ -101,6 +109,7 @@ export class Group {
 export default {
   Scene,
   Mesh,
+  Sphere,
   BufferGeometry,
   BufferAttribute,
   Vector3,

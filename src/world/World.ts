@@ -3,9 +3,11 @@ import { createAllMaterials } from "../utils/texture";
 import { BlockType } from "./BlockType";
 import { Chunk, WorkerMeshData } from "./Chunk";
 import { generateTerrain } from "./terrain";
+import { recordPerformanceMetric } from "../utils/performanceMetrics";
 
 const CHUNK_SIZE = 16;
 const RENDER_DISTANCE = 4; // chunks in each direction
+const MAX_WORKER_MESSAGES_PER_FRAME = 2;
 
 interface WorkerMessage {
   type: "GENERATE_AND_MESH_RESULT" | "MESH_ONLY_RESULT";
@@ -33,6 +35,13 @@ export class World {
   private chunksToRemesh = new Set<string>();
   private modifiedChunkBlocks = new Map<string, Uint8Array>();
   private pendingChunks = new Set<string>();
+  private queuedWorkerMessages: WorkerMessage[] = [];
+  private burstUntil: number = 0;
+  private readonly DEFAULT_BURST_DURATION_MS = 2000;
+
+  setBurstMode(durationMs: number = this.DEFAULT_BURST_DURATION_MS): void {
+    this.burstUntil = performance.now() + durationMs;
+  }
 
   constructor(scene: SceneLike, worker?: Worker, workerBaseUrl?: string | URL) {
     this.scene = scene;
@@ -44,9 +53,46 @@ export class World {
         type: "module",
       });
     this.worker.addEventListener("message", e => {
-      const { type, cx, cz, blocks, meshData } = e.data as WorkerMessage;
-      const key = this.chunkKey(cx, cz);
+      this.queuedWorkerMessages.push(e.data as WorkerMessage);
+    });
+  }
 
+  processQueuedWorkerMessages(
+    maxMessages = MAX_WORKER_MESSAGES_PER_FRAME,
+    timeBudgetMs?: number,
+  ): number {
+    const isBurst = performance.now() < this.burstUntil;
+    const effectiveMaxMessages = isBurst ? Infinity : maxMessages;
+    const effectiveTimeBudget = isBurst
+      ? (timeBudgetMs ?? 15)
+      : (timeBudgetMs ?? 12);
+    const deadline = performance.now() + effectiveTimeBudget;
+    const start = performance.now();
+    let processed = 0;
+
+    while (processed < effectiveMaxMessages && performance.now() < deadline) {
+      const message = this.queuedWorkerMessages.shift();
+      if (!message) break;
+      this.handleWorkerMessage(message);
+      processed++;
+    }
+
+    if (processed > 0) {
+      recordPerformanceMetric("world.processQueuedWorkerMessages", performance.now() - start, {
+        processed,
+        remaining: this.queuedWorkerMessages.length,
+      });
+    }
+
+    return processed;
+  }
+
+  private handleWorkerMessage(message: WorkerMessage): void {
+    const messageStart = performance.now();
+    const { type, cx, cz, blocks, meshData } = message;
+    const key = this.chunkKey(cx, cz);
+
+    try {
       if (type === "GENERATE_AND_MESH_RESULT") {
         if (!this.pendingChunks.delete(key)) {
           return;
@@ -85,7 +131,13 @@ export class World {
         }
         this.applyChunkMesh(key, chunk, meshData);
       }
-    });
+    } finally {
+      recordPerformanceMetric("world.workerMessage", performance.now() - messageStart, {
+        type,
+        cx,
+        cz,
+      });
+    }
   }
 
   private chunkKey(cx: number, cz: number): string {
@@ -154,11 +206,16 @@ export class World {
   }
 
   private applyChunkMesh(key: string, chunk: Chunk, meshData: WorkerMeshData): void {
+    const start = performance.now();
     const mesh = chunk.applyMeshData(meshData, this.materials);
     if (!this.chunkMeshes.has(key)) {
       this.scene.add(mesh);
     }
     this.chunkMeshes.set(key, mesh);
+    recordPerformanceMetric("world.applyChunkMesh", performance.now() - start, {
+      key,
+      children: mesh.children.length,
+    });
   }
 
   private disposeChunkMesh(key: string): void {
