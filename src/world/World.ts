@@ -63,9 +63,7 @@ export class World {
   ): number {
     const isBurst = performance.now() < this.burstUntil;
     const effectiveMaxMessages = isBurst ? Infinity : maxMessages;
-    const effectiveTimeBudget = isBurst
-      ? (timeBudgetMs ?? 15)
-      : (timeBudgetMs ?? 12);
+    const effectiveTimeBudget = isBurst ? (timeBudgetMs ?? 15) : (timeBudgetMs ?? 12);
     const deadline = performance.now() + effectiveTimeBudget;
     const start = performance.now();
     let processed = 0;
