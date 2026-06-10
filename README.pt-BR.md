@@ -4,8 +4,6 @@
 
 <div align="center">
 
-**v0.0.1** · Feito com ❤️ por Juan Antonio Peruzzo
-
 </div>
 
 ---

@@ -14,7 +14,7 @@ export class BlockInteractionView {
   private blockUI: HTMLDivElement;
   private blockOutline: THREE.LineSegments;
   private warningMessage: HTMLDivElement | null = null;
-  private warningTimeout: number | null = null;
+  private warningTimeout: ReturnType<typeof globalThis.setTimeout> | null = null;
 
   private selectedBlockIndex = 0;
   private blockTypes: BlockDefinition[] = [];
