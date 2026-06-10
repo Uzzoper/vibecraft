@@ -43,13 +43,13 @@ export class World {
     this.burstUntil = performance.now() + durationMs;
   }
 
-  constructor(scene: SceneLike, worker?: Worker, workerBaseUrl?: string | URL) {
+  constructor(scene: SceneLike, worker?: Worker) {
     this.scene = scene;
     this.materials = createAllMaterials();
 
     this.worker =
       worker ??
-      new Worker(new URL("world.worker.ts", workerBaseUrl ?? import.meta.url), {
+      new Worker(new URL("world.worker.ts", import.meta.url), {
         type: "module",
       });
     this.worker.addEventListener("message", e => {
