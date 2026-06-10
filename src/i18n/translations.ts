@@ -8,7 +8,7 @@ export const translations: Record<TranslationLocale, TranslationDict> = {
   en: {
     pageTitle: "VibeCraft",
     gameTitle: "VIBECRAFTLAND",
-    version: "v0.0.1",
+    version: "v0.0.2",
     footer: "Developed by Juan Antonio Peruzzo",
     deathScreen: "💀 YOU DIED",
     healthSeparator: " / ",
@@ -38,7 +38,7 @@ export const translations: Record<TranslationLocale, TranslationDict> = {
   ptBR: {
     pageTitle: "VibeCraft",
     gameTitle: "VIBECRAFTLAND",
-    version: "v0.0.1",
+    version: "v0.0.2",
     footer: "Desenvolvido por Juan Antonio Peruzzo",
     deathScreen: "💀 VOCÊ MORREU",
     healthSeparator: " / ",
